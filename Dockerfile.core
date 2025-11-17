@@ -12,6 +12,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY be/apps/core/package.json be/apps/core/package.json
 COPY be/apps/dashboard/package.json be/apps/dashboard/package.json
 COPY apps/web/package.json apps/web/package.json
+COPY patches/ ./patches/
 
 RUN pnpm fetch --filter core...
 RUN pnpm fetch --filter '@afilmory/web...'
@@ -51,6 +52,7 @@ ENV EXIFTOOL_PATH=/usr/local/bin/exiftool
 COPY --from=builder /workspace/be/apps/core/dist ./dist
 COPY --from=builder /workspace/be/packages/db/migrations ./migrations
 COPY --from=builder /workspace/be/apps/core/docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --from=builder /workspace/patches/ ./patches/
 
 RUN chmod +x ./docker-entrypoint.sh
 
