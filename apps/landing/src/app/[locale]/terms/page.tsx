@@ -1,12 +1,60 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
+import type { Metadata } from 'next'
+
 import { MarkdownContent } from '~/components/common/MarkdownContent'
 import { NormalContainer } from '~/components/layout/container/Normal'
+import {
+  buildAbsoluteUrl,
+  createLanguageAlternates,
+  OG_IMAGE_URL,
+  SITE_NAME,
+} from '~/constants/seo'
+import type { AppLocale } from '~/i18n/config'
 
-export const metadata = {
-  title: 'Terms of Service',
-  description: 'Afilmory Terms of Service',
+const PAGE_SEGMENT = '/terms'
+const PAGE_TITLE = 'Terms of Service'
+const PAGE_DESCRIPTION = 'Legal terms for using the Afilmory platform.'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const locale = (await params).locale as AppLocale
+  const languageAlternates = createLanguageAlternates(PAGE_SEGMENT)
+  const canonicalUrl =
+    languageAlternates[locale] ?? buildAbsoluteUrl(`/${locale}${PAGE_SEGMENT}`)
+
+  return {
+    title: `${PAGE_TITLE} · ${SITE_NAME}`,
+    description: PAGE_DESCRIPTION,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: languageAlternates,
+    },
+    openGraph: {
+      title: `${PAGE_TITLE} | ${SITE_NAME}`,
+      description: PAGE_DESCRIPTION,
+      url: canonicalUrl,
+      type: 'article',
+      images: [
+        {
+          url: OG_IMAGE_URL,
+          width: 1200,
+          height: 630,
+          alt: PAGE_TITLE,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${PAGE_TITLE} · ${SITE_NAME}`,
+      description: PAGE_DESCRIPTION,
+      images: [OG_IMAGE_URL],
+    },
+  }
 }
 
 export default async function TermsPage() {
