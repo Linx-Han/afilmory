@@ -1,5 +1,5 @@
 import NextBundleAnalyzer from '@next/bundle-analyzer'
-import codeInspector from 'code-inspector-plugin'
+import { codeInspectorPlugin } from 'code-inspector-plugin'
 import { config } from 'dotenv'
 import type { NextConfig } from 'next'
 import createNextIntlPlugin from 'next-intl/plugin'
@@ -31,29 +31,11 @@ let nextConfig: NextConfig = {
       "default-src 'self'; script-src 'none'; sandbox; style-src 'unsafe-inline';",
   },
 
-  async rewrites() {
-    return {
-      beforeFiles: [
-        { source: '/atom.xml', destination: '/feed' },
-        { source: '/sitemap.xml', destination: '/sitemap' },
-      ],
-    }
-  },
-
-  webpack: (config) => {
-    config.externals.push({
-      'utf-8-validate': 'commonjs utf-8-validate',
-      bufferutil: 'commonjs bufferutil',
-    })
-
-    config.plugins.push(
-      codeInspector.codeInspectorPlugin({
-        bundler: 'webpack',
-        hotKeys: ['altKey'],
-      }),
-    )
-
-    return config
+  turbopack: {
+    rules: codeInspectorPlugin({
+      bundler: 'turbopack',
+      hotKeys: ['altKey'],
+    }),
   },
 }
 

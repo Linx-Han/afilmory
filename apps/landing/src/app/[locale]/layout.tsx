@@ -7,8 +7,6 @@ import {
   setRequestLocale,
 } from 'next-intl/server'
 
-import { HydrationEndDetector } from '~/components/common/HydrationEndDetector'
-import { ScrollTop } from '~/components/common/ScrollTop'
 import { NocturneBackground } from '~/components/landing/NocturneBackground'
 import { Footer } from '~/components/layout'
 import { PageHeader } from '~/components/layout/PageHeader'
@@ -182,7 +180,6 @@ export default async function LocaleLayout({
       <ClientInit />
       <html lang={locale} suppressHydrationWarning>
         <head>
-          <HydrationEndDetector />
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
@@ -204,7 +201,6 @@ export default async function LocaleLayout({
             </Providers>
           </NextIntlClientProvider>
 
-          <ScrollTop />
           <InitInClient />
         </body>
       </html>

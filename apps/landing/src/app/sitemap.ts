@@ -5,7 +5,7 @@ import type { AppLocale } from '~/i18n/config'
 import { locales } from '~/i18n/config'
 
 const STATIC_PATHS = ['/', '/privacy', '/terms'] as const
-
+export const dynamic = 'force-static'
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date()
 
