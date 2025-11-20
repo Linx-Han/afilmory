@@ -38,11 +38,11 @@ type MultipartParseOptions = {
   abortSignal: AbortSignal
 }
 
-function formatBytesToMb (bytes: number): number {
+function formatBytesToMb(bytes: number): number {
   return Number((bytes / BYTES_PER_MB).toFixed(2))
 }
 
-function formatBytesForDisplay (bytes: number): string {
+function formatBytesForDisplay(bytes: number): string {
   return `${formatBytesToMb(bytes)} MB`
 }
 
@@ -101,7 +101,7 @@ export class PhotoController {
 
           await this.photoAssetService.uploadAssets(inputs, {
             progress: async (event) => {
-              sendEvent(event)
+              await sendEvent(event)
             },
             abortSignal,
           })
@@ -109,7 +109,7 @@ export class PhotoController {
           const message = error instanceof Error ? error.message : '上传失败'
 
           this.logger.error(error)
-          sendEvent({ type: 'error', payload: { message } })
+          await sendEvent({ type: 'error', payload: { message } })
         }
       },
     })
