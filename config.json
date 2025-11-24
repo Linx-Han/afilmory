@@ -1,0 +1,30 @@
+{
+  "name": "Linx's Gallery",
+  "title": "Linx's Gallery",
+  "description": "Capturing beautiful moments in life, documenting daily warmth and emotions through my lens.",
+  "url": "https://linxhan.us/",
+  "accentColor": "#007bff",
+  "author": {
+    "name": "Linx",
+    "url": "https://linxhan.us/",
+    "avatar": "https://s4.nszero.net/public/linx.jpg"
+  },
+  "social": {
+    "github": "",
+    "twitter": "",
+    "rss": false
+  },
+  "feed": {
+    "folo": {
+      "challenge": {
+        "feedId": "",
+        "userId": ""
+      }
+    }
+  },
+  "map": [
+    "maplibre"
+  ],
+  "mapStyle": "builtin",
+  "mapProjection": "mercator"
+}
