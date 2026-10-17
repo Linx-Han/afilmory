@@ -40,7 +40,7 @@ void main() {
              + readPhoto(q + vec2(blur, -blur)) + readPhoto(q - vec2(blur, blur))) * 0.25;
   vec4 color = mix(vec4(red.r, center.g, blue.b, center.a), soft, strength * 0.45 * amount);
   float distance = max(min(d.x, d.y), 0.0) - length(max(-d, vec2(0.0)));
-  float feather = smoothstep(-band * 0.38, band * 0.32, distance);
+  float feather = smoothstep(-band * 0.48, band * 0.32, distance);
   float alpha = mix(step(0.0, min(d.x, d.y)), feather, amount) * color.a;
   gl_FragColor = vec4(color.rgb * alpha, alpha);
 }`
