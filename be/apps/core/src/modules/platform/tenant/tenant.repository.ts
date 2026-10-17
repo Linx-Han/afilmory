@@ -1,12 +1,12 @@
 import { generateId, tenants } from '@afilmory/db'
-import { isTenantSlugReserved } from '@afilmory/utils'
-import { DbAccessor } from 'core/database/database.provider'
-import { BizException, ErrorCode } from 'core/errors'
-import type { BillingPlanId } from 'core/modules/platform/billing/billing-plan.types'
-import { desc, eq } from 'drizzle-orm'
+import { RESERVED_TENANT_SLUGS } from '@afilmory/utils'
+import { DbAccessor } from '@core/database/database.provider'
+import { BizException, ErrorCode } from '@core/errors'
+import type { BillingPlanId } from '@core/modules/platform/billing/plan/billing-plan.types'
+import { and, asc, count, desc, eq, ilike, isNotNull, notInArray, or } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 
-import type { TenantAggregate } from './tenant.types'
+import type { TenantAggregate, TenantRecord } from './tenant.types'
 
 @injectable()
 export class TenantRepository {
@@ -36,6 +36,7 @@ export class TenantRepository {
     slug: string
     planId?: BillingPlanId
     storagePlanId?: string | null
+    status?: TenantAggregate['tenant']['status']
   }): Promise<TenantAggregate> {
     const db = this.dbAccessor.get()
     const tenantId = generateId()
@@ -45,7 +46,7 @@ export class TenantRepository {
       slug: payload.slug,
       planId: payload.planId ?? 'free',
       storagePlanId: payload.storagePlanId ?? null,
-      status: 'active',
+      status: payload.status ?? 'active',
     }
 
     await db.insert(tenants).values(tenantRecord)
@@ -65,21 +66,71 @@ export class TenantRepository {
     await db.delete(tenants).where(eq(tenants.id, id))
   }
 
-  async updatePlan(id: string, planId: BillingPlanId): Promise<void> {
-    const db = this.dbAccessor.get()
-    await db.update(tenants).set({ planId, updatedAt: new Date().toISOString() }).where(eq(tenants.id, id))
-  }
-
   async updateBanned(id: string, banned: boolean): Promise<void> {
     const db = this.dbAccessor.get()
     await db.update(tenants).set({ banned, updatedAt: new Date().toISOString() }).where(eq(tenants.id, id))
   }
 
-  async listTenants(): Promise<TenantAggregate[]> {
+  async listTenants(options: {
+    page: number
+    limit: number
+    search?: string
+    status?: TenantRecord['status']
+    sortBy?: 'createdAt' | 'name'
+    sortDir?: 'asc' | 'desc'
+    requireStoragePlan?: boolean
+  }): Promise<{ items: TenantAggregate[], total: number }> {
     const db = this.dbAccessor.get()
-    const rows = await db.select().from(tenants).orderBy(desc(tenants.createdAt))
+    const { page, limit, search, status, sortBy = 'createdAt', sortDir = 'desc' } = options
 
-    // Ignore preseve slug
-    return rows.filter((tenant) => !isTenantSlugReserved(tenant.slug)).map((tenant) => ({ tenant }))
+    // `demo` is the App Review workspace, so root admins still need to manage its plan.
+    const conditions = [
+      notInArray(
+        tenants.slug,
+        RESERVED_TENANT_SLUGS.filter(slug => slug !== 'demo'),
+      ),
+    ]
+
+    if (status) {
+      conditions.push(eq(tenants.status, status))
+    }
+
+    if (options.requireStoragePlan) {
+      conditions.push(isNotNull(tenants.storagePlanId))
+    }
+
+    if (search) {
+      const searchLike = `%${search}%`
+      const searchClause = or(ilike(tenants.name, searchLike), ilike(tenants.slug, searchLike))
+      if (searchClause) {
+        conditions.push(searchClause)
+      }
+    }
+
+    const where = and(...conditions)
+
+    const [total] = await db.select({ count: count() }).from(tenants).where(where)
+
+    let orderBy
+    const sortColumn = sortBy === 'name' ? tenants.name : tenants.createdAt
+    if (sortDir === 'asc') {
+      orderBy = asc(sortColumn)
+    }
+    else {
+      orderBy = desc(sortColumn)
+    }
+
+    const rows = await db
+      .select()
+      .from(tenants)
+      .where(where)
+      .limit(limit)
+      .offset((page - 1) * limit)
+      .orderBy(orderBy)
+
+    return {
+      items: rows.map(tenant => ({ tenant })),
+      total: total?.count ?? 0,
+    }
   }
 }

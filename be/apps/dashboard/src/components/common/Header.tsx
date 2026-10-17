@@ -5,14 +5,17 @@ import { NavLink, useNavigate } from 'react-router'
 import { useAuthUserValue } from '~/atoms/auth'
 import { useTenantPlanQuery } from '~/modules/billing'
 
+import { LanguageSwitcher } from './LanguageSwitcher'
 import { UserMenu } from './UserMenu'
+import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 
 const navigationTabs = [
   { labelKey: 'nav.overview', path: '/' },
   { labelKey: 'nav.photos', path: '/photos' },
+  { labelKey: 'nav.comments', path: '/comments' },
   { labelKey: 'nav.analytics', path: '/analytics' },
   { labelKey: 'nav.settings', path: '/settings' },
-] as const satisfies readonly { labelKey: I18nKeys; path: string }[]
+] as const satisfies readonly { labelKey: I18nKeys, path: string }[]
 
 export function Header() {
   const user = useAuthUserValue()
@@ -31,7 +34,7 @@ export function Header() {
 
         {/* Navigation Tabs */}
         <nav className="flex flex-1 items-center gap-0.5 sm:gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {navigationTabs.map((tab) => (
+          {navigationTabs.map(tab => (
             <NavLink key={tab.path} to={tab.path} end={tab.path === '/'}>
               {({ isActive }) => (
                 <div
@@ -49,17 +52,28 @@ export function Header() {
         </nav>
 
         {/* Right side - User Menu */}
-        {user && (
-          <div className="border-fill-tertiary/50 ml-2 sm:ml-auto flex items-center gap-3 border-l pl-2 sm:pl-4">
-            <PlanBadge
-              label={planLabel}
-              isLoading={planQuery.isLoading}
-              onClick={() => navigate('/plan')}
-              labelKey="header.plan.badge"
-            />
-            <UserMenu user={user} />
-          </div>
-        )}
+        <div className="ml-2 flex items-center gap-2 sm:ml-auto sm:gap-3 sm:border-l sm:border-fill-tertiary/50 sm:pl-4">
+          <LanguageSwitcher />
+          {user && (
+            <>
+              <WorkspaceSwitcher />
+              <div className="hidden md:block">
+                <PlanBadge
+                  label={planLabel}
+                  isLoading={planQuery.isLoading}
+                  onClick={() => navigate('/plan')}
+                  labelKey="header.plan.badge"
+                />
+              </div>
+              <UserMenu
+                user={user}
+                planLabel={planLabel}
+                planLabelKey="header.plan.badge"
+                planLoading={planQuery.isLoading}
+              />
+            </>
+          )}
+        </div>
       </div>
     </header>
   )

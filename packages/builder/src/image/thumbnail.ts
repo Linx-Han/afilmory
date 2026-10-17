@@ -2,10 +2,10 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 import { workdir } from '@afilmory/builder/path.js'
+import type { ThumbnailResult } from '@afilmory/typing'
 import sharp from 'sharp'
 
 import { getGlobalLoggers } from '../photo/logger-adapter.js'
-import type { ThumbnailResult } from '../types/photo.js'
 import { generateBlurhash } from './blurhash.js'
 
 // 常量定义
@@ -79,7 +79,12 @@ async function processExistingThumbnail(photoId: string): Promise<ThumbnailResul
 }
 
 // 生成新的缩略图
-async function generateNewThumbnail(imageBuffer: Buffer, photoId: string): Promise<ThumbnailResult> {
+async function generateNewThumbnail(
+  imageBuffer: Buffer,
+  photoId: string,
+  persistToDisk = true,
+  limitInputPixels?: number | boolean,
+): Promise<ThumbnailResult> {
   const { thumbnailPath, thumbnailUrl } = getThumbnailPaths(photoId)
 
   const log = getGlobalLoggers().thumbnail
@@ -88,7 +93,7 @@ async function generateNewThumbnail(imageBuffer: Buffer, photoId: string): Promi
 
   try {
     // 创建 Sharp 实例，复用于缩略图和 blurhash 生成
-    const sharpInstance = sharp(imageBuffer).rotate() // 自动根据 EXIF 旋转
+    const sharpInstance = sharp(imageBuffer, { limitInputPixels }).rotate() // 自动根据 EXIF 旋转
 
     // 生成缩略图
     const thumbnailBuffer = await sharpInstance
@@ -100,7 +105,9 @@ async function generateNewThumbnail(imageBuffer: Buffer, photoId: string): Promi
       .toBuffer()
 
     // 保存到文件
-    await fs.writeFile(thumbnailPath, thumbnailBuffer)
+    if (persistToDisk) {
+      await fs.writeFile(thumbnailPath, thumbnailBuffer)
+    }
 
     // 记录生成信息
     const duration = Date.now() - startTime
@@ -122,11 +129,15 @@ export async function generateThumbnailAndBlurhash(
   imageBuffer: Buffer,
   photoId: string,
   forceRegenerate = false,
+  persistToDisk = true,
+  limitInputPixels?: number | boolean,
 ): Promise<ThumbnailResult> {
   const thumbnailLog = getGlobalLoggers().thumbnail
 
   try {
-    await ensureThumbnailDir()
+    if (persistToDisk) {
+      await ensureThumbnailDir()
+    }
 
     // 如果不是强制模式且缩略图已存在，尝试复用现有文件
     if (!forceRegenerate && (await thumbnailExists(photoId))) {
@@ -139,7 +150,7 @@ export async function generateThumbnailAndBlurhash(
     }
 
     // 生成新的缩略图
-    return await generateNewThumbnail(imageBuffer, photoId)
+    return await generateNewThumbnail(imageBuffer, photoId, persistToDisk, limitInputPixels)
   } catch (error) {
     thumbnailLog.error(`处理失败：${photoId}`, error)
     return createFailureResult()

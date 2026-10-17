@@ -43,7 +43,7 @@ export function SettingsNavigation({ active }: SettingsNavigationProps) {
   return (
     <PageTabs
       activeId={active}
-      items={SETTINGS_TABS.map((tab) => ({
+      items={SETTINGS_TABS.map(tab => ({
         id: tab.id,
         labelKey: tab.labelKey,
         to: tab.path,

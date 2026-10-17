@@ -1,3 +1,5 @@
+import './index.css'
+
 import { clsxm } from '@afilmory/utils'
 import * as ScrollAreaBase from '@radix-ui/react-scroll-area'
 import clsx from 'clsx'
@@ -72,7 +74,7 @@ Scrollbar.displayName = 'ScrollArea.Scrollbar'
 const Viewport = ({
   ref: forwardedRef,
   className,
-
+  mask = false,
   focusable = true,
   ...rest
 }: React.ComponentPropsWithoutRef<typeof ScrollAreaBase.Viewport> & {
@@ -89,11 +91,7 @@ const Viewport = ({
       {...rest}
       ref={ref}
       tabIndex={focusable ? -1 : void 0}
-      className={clsxm(
-        'block size-full',
-
-        className,
-      )}
+      className={clsxm('block size-full', mask && 'mask-scroller', className)}
     />
   )
 }

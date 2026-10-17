@@ -3,7 +3,6 @@ import { clsxm } from '@afilmory/utils'
 import type { KeyboardEvent } from 'react'
 import { useMemo, useState } from 'react'
 
-
 type AutoSelectOption = {
   label: string
   value: string
@@ -85,7 +84,7 @@ export function AutoSelect({ options, value, onChange, placeholder, disabled }: 
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className="border-none px-1 py-0 text-xs focus:ring-0"
+              className="border-none px-1 h-full py-0 text-xs focus:ring-0"
               disabled={disabled}
             />
           </div>

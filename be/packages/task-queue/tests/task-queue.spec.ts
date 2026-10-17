@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
-import { createApplication, Module } from '@afilmory/framework'
+import { Module } from '@tsuki-hono/common'
+import { createApplication } from '@tsuki-hono/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { InMemoryQueueDriver } from '../src/drivers/in-memory.driver'
@@ -10,9 +11,9 @@ import { TaskQueueModule } from '../src/task-queue.module'
 import type { DriverTask, PollOptions, TaskContext, TaskQueueDriver } from '../src/types'
 import { TaskDropError, TaskRetryError } from '../src/types'
 
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+const flush = () => new Promise(resolve => setTimeout(resolve, 0))
 
-describe('TaskQueue', () => {
+describe('taskQueue', () => {
   let queue: TaskQueue
 
   beforeEach(() => {
@@ -37,7 +38,7 @@ describe('TaskQueue', () => {
 
     await queue.start()
     await queue.enqueue({ name: 'no-retry', payload: {} })
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await new Promise(resolve => setTimeout(resolve, 20))
 
     expect(handler).toHaveBeenCalledTimes(1)
     const stats = await queue.getStats()
@@ -74,6 +75,30 @@ describe('TaskQueue', () => {
     await queue.shutdown()
   })
 
+  it('does not execute more tasks than the configured concurrency', async () => {
+    let active = 0
+    let maximumActive = 0
+    const handler = vi.fn(async () => {
+      active += 1
+      maximumActive = Math.max(maximumActive, active)
+      await new Promise(resolve => setTimeout(resolve, 20))
+      active -= 1
+    })
+
+    queue.registerHandler('bounded-task', handler)
+    await queue.start()
+    await Promise.all(
+      Array.from({ length: 6 }, async (_, index) => {
+        await queue.enqueue({ name: 'bounded-task', payload: { index } })
+      }),
+    )
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    expect(handler).toHaveBeenCalledTimes(6)
+    expect(maximumActive).toBe(2)
+    await queue.shutdown()
+  })
+
   it('retries handler failures with exponential backoff', async () => {
     const attempts: number[] = []
 
@@ -87,14 +112,14 @@ describe('TaskQueue', () => {
       },
       {
         maxAttempts: 5,
-        backoffStrategy: (attempt) => attempt * 10,
+        backoffStrategy: attempt => attempt * 10,
       },
     )
 
     await queue.start()
     await queue.enqueue({ name: 'unstable-task', payload: {} })
 
-    await new Promise((resolve) => setTimeout(resolve, 120))
+    await new Promise(resolve => setTimeout(resolve, 120))
 
     expect(attempts).toEqual([1, 2, 3])
     await queue.shutdown()
@@ -122,7 +147,7 @@ describe('TaskQueue', () => {
     await queue.enqueue({ name: 'drop-task', payload: {} })
     await queue.enqueue({ name: 'retry-task', payload: {} })
 
-    await new Promise((resolve) => setTimeout(resolve, 80))
+    await new Promise(resolve => setTimeout(resolve, 80))
 
     expect(dropHandler).toHaveBeenCalledTimes(1)
     expect(retryHandler).toHaveBeenCalledTimes(2)
@@ -184,7 +209,7 @@ describe('TaskQueue', () => {
     ;(orphanQueue as any).handlers.delete('ephemeral')
     await driver.enqueue(task)
 
-    await new Promise((resolve) => setTimeout(resolve, 25))
+    await new Promise(resolve => setTimeout(resolve, 25))
     const stats = await orphanQueue.getStats()
     expect(stats.inFlight).toBe(0)
     await orphanQueue.shutdown()
@@ -193,20 +218,20 @@ describe('TaskQueue', () => {
   it('logs polling failures without terminating the loop', async () => {
     const pollError = new Error('driver failure')
     const driver: TaskQueueDriver = {
-      enqueue: vi.fn().mockResolvedValue(),
-      reschedule: vi.fn().mockResolvedValue(),
+      enqueue: vi.fn().mockResolvedValue(undefined),
+      reschedule: vi.fn().mockResolvedValue(undefined),
       poll: vi.fn().mockRejectedValue(pollError),
-      acknowledge: vi.fn().mockResolvedValue(),
-      fail: vi.fn().mockResolvedValue(),
+      acknowledge: vi.fn().mockResolvedValue(undefined),
+      fail: vi.fn().mockResolvedValue(undefined),
       stats: vi.fn().mockResolvedValue({ queued: 0, inFlight: 0, scheduled: 0 }),
-      shutdown: vi.fn().mockResolvedValue(),
+      shutdown: vi.fn().mockResolvedValue(undefined),
     }
 
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const resilientQueue = new TaskQueue({ name: 'faulty', driver })
     resilientQueue.registerHandler('noop', async () => {})
     await resilientQueue.start({ pollIntervalMs: 10 })
-    await new Promise((resolve) => setTimeout(resolve, 25))
+    await new Promise(resolve => setTimeout(resolve, 25))
     await resilientQueue.shutdown()
     errorSpy.mockRestore()
     expect(driver.poll).toHaveBeenCalled()
@@ -214,12 +239,12 @@ describe('TaskQueue', () => {
 
   it('handles abort-aware drivers gracefully', async () => {
     class AbortDriver implements TaskQueueDriver {
-      enqueue = vi.fn().mockResolvedValue()
-      reschedule = vi.fn().mockResolvedValue()
-      acknowledge = vi.fn().mockResolvedValue()
-      fail = vi.fn().mockResolvedValue()
+      enqueue = vi.fn().mockResolvedValue(undefined)
+      reschedule = vi.fn().mockResolvedValue(undefined)
+      acknowledge = vi.fn().mockResolvedValue(undefined)
+      fail = vi.fn().mockResolvedValue(undefined)
       stats = vi.fn().mockResolvedValue({ queued: 0, inFlight: 0, scheduled: 0 })
-      shutdown = vi.fn().mockResolvedValue()
+      shutdown = vi.fn().mockResolvedValue(undefined)
       poll = vi.fn(
         ({ signal }: { signal: AbortSignal }) =>
           new Promise((_resolve, reject) => {
@@ -240,7 +265,7 @@ describe('TaskQueue', () => {
   })
 })
 
-describe('TaskQueueManager', () => {
+describe('taskQueueManager', () => {
   it('creates, lists, and reuses queues', async () => {
     const manager = new TaskQueueManager()
     const first = manager.createQueue('jobs', { start: false })
@@ -258,12 +283,12 @@ describe('TaskQueueManager', () => {
     const queue = manager.createQueue('auto')
     queue.registerHandler('noop', async () => {})
     await queue.enqueue({ name: 'noop', payload: {} })
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await new Promise(resolve => setTimeout(resolve, 20))
     await manager.shutdownAll()
   })
 })
 
-describe('InMemoryQueueDriver', () => {
+describe('inMemoryQueueDriver', () => {
   it('supports scheduling and poll timeout behavior', async () => {
     const driver = new InMemoryQueueDriver({ name: 'tests' })
     const future = Date.now() + 20
@@ -280,7 +305,7 @@ describe('InMemoryQueueDriver', () => {
     const none = await driver.poll({ timeoutMs: 5, visibilityTimeoutMs: 1000 })
     expect(none).toBeNull()
 
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    await new Promise(resolve => setTimeout(resolve, 30))
     const task = await driver.poll({ timeoutMs: 5, visibilityTimeoutMs: 1000 })
     expect(task?.name).toBe('job')
     await driver.acknowledge(task!)
@@ -311,7 +336,7 @@ describe('InMemoryQueueDriver', () => {
   it('resolves pending pollers during shutdown', async () => {
     const driver = new InMemoryQueueDriver({ name: 'shutdown' })
     const pending = driver.poll({ timeoutMs: 1000, visibilityTimeoutMs: 1000 })
-    await new Promise((resolve) => setTimeout(resolve, 10))
+    await new Promise(resolve => setTimeout(resolve, 10))
     await driver.shutdown()
     expect(await pending).toBeNull()
     const after = await driver.poll({ timeoutMs: 10, visibilityTimeoutMs: 10 })
@@ -327,7 +352,7 @@ describe('InMemoryQueueDriver', () => {
   })
 })
 
-describe('TaskQueueModule integration', () => {
+describe('taskQueueModule integration', () => {
   it('registers the TaskQueueManager provider', async () => {
     @Module({
       imports: [TaskQueueModule],

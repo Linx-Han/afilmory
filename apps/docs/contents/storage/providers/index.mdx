@@ -2,7 +2,7 @@
 title: Storage Providers
 description: Choose a storage provider for your photo collection.
 createdAt: 2025-11-14T22:40:00+08:00
-lastModified: 2025-11-23T19:40:52+08:00
+lastModified: 2025-12-05T15:28:22+08:00
 order: 30
 ---
 
@@ -20,6 +20,24 @@ Afilmory supports multiple storage providers for your photo collection. Choose t
 - CDN-friendly with custom domains
 - Works with AWS S3, MinIO, Cloudflare R2, and other S3-compatible services
 - Recommended for large collections
+
+### [Aliyun OSS](/storage/providers/oss)
+
+**China-mainland optimized**
+
+- Native endpoint defaults for `oss-` regions
+- Works with classic or internal network OSS domains
+- Ideal when data residency or ICP compliance is required
+- Supports CDN fronting via `customDomain`
+
+### [Tencent COS](/storage/providers/cos)
+
+**Tencent Cloud ecosystems**
+
+- First-class support for COS buckets (`bucket-appid`)
+- Automatic `cos.<region>.myqcloud.com` endpoint handling
+- Compatible with COS acceleration domains and CLS logging
+- Preferred for deployments already on Tencent Cloud
 
 ### [B2 (Backblaze B2)](/storage/providers/b2)
 
@@ -60,13 +78,16 @@ Afilmory supports multiple storage providers for your photo collection. Choose t
 ## Choosing a Provider
 
 **For production:**
+
 - Use **S3** or **B2** for scalability and reliability
 
 **For development:**
+
 - Use **Local** for fastest iteration
 - Use **GitHub** for simple demos
 
 **For existing workflows:**
+
 - Use **Eagle** if you already manage photos there
 - Use **GitHub** if your photos are already in a repo
 
@@ -88,4 +109,9 @@ export default defineBuilderConfig(() => ({
 Credentials and sensitive information should be stored in `.env` and referenced via `process.env`.
 
 See each provider's documentation for specific configuration options.
+
+
+
+
+
 

@@ -1,47 +1,75 @@
 import { Button } from '@afilmory/ui'
 import { clsxm } from '@afilmory/utils'
-import { DynamicIcon } from 'lucide-react/dynamic'
-import type { FC } from 'react'
+import {
+  Check,
+  CheckCircle,
+  Cloud,
+  CloudDrizzle,
+  CloudSnow,
+  Database,
+  Folder,
+  Image,
+  Pencil,
+  Server,
+  XCircle,
+} from 'lucide-react'
+import type { ComponentType, FC } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { storageProvidersI18nKeys } from '../constants'
 import type { StorageProvider } from '../types'
 
+type ProviderIcon = ComponentType<{ className?: string }>
+
+const GithubIcon: ProviderIcon = ({ className }) => (
+  <i className={clsxm('i-logos-github-icon', className)} aria-hidden />
+)
+
 const providerTypeConfig: Record<
   string,
   {
-    icon: string
+    Icon: ProviderIcon
     color: string
     bgColor: string
   }
 > = {
   s3: {
-    icon: 'database',
+    Icon: Database,
     color: 'text-orange-500',
     bgColor: 'bg-orange-500/10',
   },
+  oss: {
+    Icon: CloudDrizzle,
+    color: 'text-emerald-500',
+    bgColor: 'bg-emerald-500/10',
+  },
+  cos: {
+    Icon: CloudSnow,
+    color: 'text-cyan-500',
+    bgColor: 'bg-cyan-500/10',
+  },
   b2: {
-    icon: 'cloud',
+    Icon: Cloud,
     color: 'text-sky-500',
     bgColor: 'bg-sky-500/10',
   },
   github: {
-    icon: 'github',
+    Icon: GithubIcon,
     color: 'text-purple-500',
-    bgColor: 'bg-purple-500/10',
+    bgColor: 'bg-white',
   },
   local: {
-    icon: 'folder',
+    Icon: Folder,
     color: 'text-blue-500',
     bgColor: 'bg-blue-500/10',
   },
   minio: {
-    icon: 'server',
+    Icon: Server,
     color: 'text-red-500',
     bgColor: 'bg-red-500/10',
   },
   eagle: {
-    icon: 'image',
+    Icon: Image,
     color: 'text-amber-500',
     bgColor: 'bg-amber-500/10',
   },
@@ -65,7 +93,9 @@ export const ProviderCard: FC<ProviderCardProps> = ({ provider, isActive, onEdit
   const getPreviewInfo = () => {
     const cfg = provider.config
     switch (provider.type) {
-      case 's3': {
+      case 's3':
+      case 'oss':
+      case 'cos': {
         return cfg.region || cfg.bucket || t(storageProvidersI18nKeys.card.notConfigured)
       }
       case 'github': {
@@ -98,7 +128,7 @@ export const ProviderCard: FC<ProviderCardProps> = ({ provider, isActive, onEdit
       {isActive && (
         <div className="absolute top-3 right-3">
           <span className="bg-accent inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white uppercase">
-            <DynamicIcon name="check-circle" className="h-3 w-3" />
+            <CheckCircle className="h-3 w-3" />
             {t(storageProvidersI18nKeys.card.active)}
           </span>
         </div>
@@ -107,7 +137,7 @@ export const ProviderCard: FC<ProviderCardProps> = ({ provider, isActive, onEdit
       {/* Provider Icon */}
       <div className="relative">
         <div className={clsxm('inline-flex h-12 w-12 items-center justify-center rounded-lg', config.bgColor)}>
-          <DynamicIcon name={config.icon as any} className={clsxm('h-6 w-6', config.color)} />
+          <config.Icon className={clsxm('h-6 w-6', config.color)} />
         </div>
       </div>
 
@@ -130,23 +160,17 @@ export const ProviderCard: FC<ProviderCardProps> = ({ provider, isActive, onEdit
             className="text-text-secondary hover:text-text"
             onClick={onToggleActive}
           >
-            <DynamicIcon name="x-circle" className="mr-1 h-3.5 w-3.5" />
+            <XCircle className="mr-1 h-3.5 w-3.5" />
             <span>{t(storageProvidersI18nKeys.card.makeInactive)}</span>
           </Button>
         ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="border-accent/30 bg-accent/10 text-accent hover:bg-accent/20 border"
-            onClick={onToggleActive}
-          >
-            <DynamicIcon name="check" className="h-3.5 w-3.5 mr-1" />
+          <Button type="button" variant="ghost" size="sm" onClick={onToggleActive}>
+            <Check className="h-3.5 w-3.5 mr-1" />
             <span>{t(storageProvidersI18nKeys.card.makeActive)}</span>
           </Button>
         )}
         <Button type="button" variant="ghost" size="sm" onClick={onEdit}>
-          <DynamicIcon name="pencil" className="mr-1 h-3.5 w-3.5" />
+          <Pencil className="mr-1 h-3.5 w-3.5" />
           <span>{t(storageProvidersI18nKeys.card.edit)}</span>
         </Button>
       </div>

@@ -1,4 +1,4 @@
-import { BizException, ErrorCode } from 'core/errors'
+import { BizException, ErrorCode } from '@core/errors'
 
 /**
  * Normalizes a string value by trimming whitespace.
@@ -103,4 +103,40 @@ export function requireStringWithMessage(value: string | undefined | null, messa
     throw new BizException(ErrorCode.COMMON_BAD_REQUEST, { message })
   }
   return normalized
+}
+
+/**
+ * Parses a string value to a number.
+ * Returns undefined if the value cannot be parsed as a finite number.
+ * This is stricter than normalizeNumber which returns 0 for invalid values.
+ */
+export function parseNumber(value?: string | null): number | undefined {
+  const normalized = normalizeStringToUndefined(value)
+  if (!normalized) {
+    return undefined
+  }
+
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+/**
+ * Parses a string value to a boolean.
+ * Supports multiple formats: 'true'/'false', '1'/'0', 'yes'/'no', 'y'/'n', 'on'/'off'.
+ * Returns undefined if the value cannot be parsed as a boolean.
+ */
+export function parseBoolean(value?: string | null): boolean | undefined {
+  const normalized = normalizeStringToUndefined(value)
+  if (!normalized) {
+    return undefined
+  }
+
+  const lowered = normalized.toLowerCase()
+  if (['true', '1', 'yes', 'y', 'on'].includes(lowered)) {
+    return true
+  }
+  if (['false', '0', 'no', 'n', 'off'].includes(lowered)) {
+    return false
+  }
+  return undefined
 }

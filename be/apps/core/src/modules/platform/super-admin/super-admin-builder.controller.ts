@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 
@@ -8,28 +9,33 @@ import {
   DEFAULT_DIRECTORY as DEFAULT_THUMBNAIL_DIRECTORY,
   THUMBNAIL_PLUGIN_DATA_KEY,
 } from '@afilmory/builder/plugins/thumbnail-storage/shared.js'
-import { ContextParam, Controller, createLogger, Post } from '@afilmory/framework'
-import { BizException, ErrorCode } from 'core/errors'
-import { Roles } from 'core/guards/roles.decorator'
-import { BypassResponseTransform } from 'core/interceptors/response-transform.decorator'
-import { PhotoBuilderService } from 'core/modules/content/photo/builder/photo-builder.service'
-import { runWithBuilderLogRelay } from 'core/modules/infrastructure/data-sync/builder-log-relay'
-import type { DataSyncProgressEmitter } from 'core/modules/infrastructure/data-sync/data-sync.types'
-import { createProgressSseResponse } from 'core/modules/shared/http/sse'
+import { BizException, ErrorCode } from '@core/errors'
+import { PlatformRoles } from '@core/guards/roles.decorator'
+import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
+import { PhotoBuilderService } from '@core/modules/content/photo/builder/photo-builder.service'
+import { runWithBuilderLogRelay } from '@core/modules/infrastructure/data-sync/builder-log-relay'
+import type { DataSyncProgressEmitter } from '@core/modules/infrastructure/data-sync/data-sync.types'
+import { createProgressSseResponse } from '@core/modules/shared/http/sse'
+import { ContextParam, Controller, createLogger, Post } from '@tsuki-hono/common'
 import type { Context } from 'hono'
 
+import { joinSegments, normalizeKeyPath } from '../../content/photo/storage/storage.utils'
 import type { BuilderDebugProgressEvent, StorageResolution, UploadedDebugFile } from './InMemoryDebugStorageProvider'
 import { InMemoryDebugStorageProvider } from './InMemoryDebugStorageProvider'
+import { SuperAdminAuditService } from './super-admin-audit.service'
 
 const DEBUG_STORAGE_PREFIX = '.afilmory/debug'
 const DEBUG_STORAGE_PROVIDER = 'super-admin-debug-storage'
 
 @Controller('super-admin/builder')
-@Roles('superadmin')
+@PlatformRoles('superadmin')
 export class SuperAdminBuilderDebugController {
   private readonly logger = createLogger('SuperAdminBuilderDebugController')
 
-  constructor(private readonly photoBuilderService: PhotoBuilderService) {}
+  constructor(
+    private readonly photoBuilderService: PhotoBuilderService,
+    private readonly audit: SuperAdminAuditService,
+  ) {}
 
   @Post('debug')
   @BypassResponseTransform()
@@ -67,6 +73,13 @@ export class SuperAdminBuilderDebugController {
             logEmitter,
           })
 
+          await this.audit.record({
+            action: 'builder.debug',
+            targetType: 'builder',
+            targetId: 'debug-run',
+            before: { fileName: file.name, contentType: file.contentType, size: file.size },
+            after: { resultType: result.resultType, filesDeleted: result.filesDeleted },
+          })
           await sendEvent({
             type: 'complete',
             payload: {
@@ -77,9 +90,18 @@ export class SuperAdminBuilderDebugController {
               filesDeleted: result.filesDeleted,
             },
           })
-        } catch (error) {
+        }
+        catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown error'
           this.logger.error('Builder debug run failed', error)
+          await this.audit.record({
+            action: 'builder.debug',
+            targetType: 'builder',
+            targetId: 'debug-run',
+            result: 'failed',
+            errorCode: error instanceof Error ? error.name : 'unknown',
+            before: { fileName: file.name, contentType: file.contentType, size: file.size },
+          })
           await sendEvent({ type: 'error', payload: { message } })
         }
       },
@@ -150,14 +172,14 @@ export class SuperAdminBuilderDebugController {
             isForceManifest: true,
             isForceThumbnails: true,
           },
-        }),
-      )
+        }))
 
       const thumbnailKey = this.resolveThumbnailStorageKey(processed?.pluginData)
       if (thumbnailKey) {
         cleanupKeys.add(thumbnailKey)
       }
-    } finally {
+    }
+    finally {
       filesDeleted = await this.cleanupDebugArtifacts(storageManager, cleanupKeys)
     }
 
@@ -176,7 +198,8 @@ export class SuperAdminBuilderDebugController {
     for (const value of Object.values(payload)) {
       if (value instanceof File) {
         files.push(value)
-      } else if (Array.isArray(value)) {
+      }
+      else if (Array.isArray(value)) {
         for (const entry of value) {
           if (entry instanceof File) {
             files.push(entry)
@@ -203,11 +226,11 @@ export class SuperAdminBuilderDebugController {
     const ext = path.extname(filename)
     const safeExt = ext || '.jpg'
     const baseName = `${Date.now()}-${randomUUID()}`
-    return this.joinSegments(DEBUG_STORAGE_PREFIX, `${baseName}${safeExt}`)
+    return joinSegments(DEBUG_STORAGE_PREFIX, `${baseName}${safeExt}`)
   }
 
   private normalizeStorageObjectKey(object: StorageObject, fallbackKey: string): StorageObject {
-    const normalizedKey = this.normalizeKeyPath(object?.key ?? fallbackKey)
+    const normalizedKey = normalizeKeyPath(object?.key ?? fallbackKey)
     if (normalizedKey === object?.key) {
       return object
     }
@@ -217,28 +240,13 @@ export class SuperAdminBuilderDebugController {
     }
   }
 
-  private normalizeKeyPath(raw: string | undefined | null): string {
-    if (!raw) {
-      return ''
-    }
-    const segments = raw.split(/[\\/]+/)
-    const safeSegments: string[] = []
-    for (const segment of segments) {
-      const trimmed = segment.trim()
-      if (!trimmed || trimmed === '.' || trimmed === '..') {
-        continue
-      }
-      safeSegments.push(trimmed)
-    }
-    return safeSegments.join('/')
-  }
-
   private async cleanupDebugArtifacts(storageManager: StorageManager, keys: Set<string>): Promise<boolean> {
     let success = true
     for (const key of keys) {
       try {
         await storageManager.deleteFile(key)
-      } catch (error) {
+      }
+      catch (error) {
         success = false
         this.logger.warn(`Failed to delete debug artifact ${key}`, error)
       }
@@ -256,27 +264,8 @@ export class SuperAdminBuilderDebugController {
       return null
     }
 
-    const remotePrefix = this.joinSegments(DEFAULT_THUMBNAIL_DIRECTORY)
+    const remotePrefix = joinSegments(DEFAULT_THUMBNAIL_DIRECTORY)
 
-    return this.joinSegments(remotePrefix, data.fileName)
-  }
-
-  private joinSegments(...segments: Array<string | null | undefined>): string {
-    const parts: string[] = []
-
-    for (const raw of segments) {
-      if (!raw) {
-        continue
-      }
-      const normalized = raw
-        .replaceAll('\\', '/')
-        .replaceAll(/^\/+|\/+$/g, '')
-        .trim()
-      if (normalized.length > 0) {
-        parts.push(normalized)
-      }
-    }
-
-    return parts.join('/')
+    return joinSegments(remotePrefix, data.fileName)
   }
 }

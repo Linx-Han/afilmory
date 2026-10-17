@@ -103,7 +103,7 @@ Notes:
 
 - `name` / `title` / `description` / `url` / `accentColor`
 - `author`: `{ name, url, avatar }`
-- `social`: `{ github?, twitter?, rss? }`
+- `social`: `{ github?, twitter? }`
 - `feed`: supports `folo.challenge.feedId` and `userId`
 - `map`: map providers, e.g. `["maplibre"]`
 - `mapStyle`: `builtin` or provider-specific style

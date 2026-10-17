@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
 import { PUBLIC_ROUTES } from '~/constants/routes'
 import type { SessionResponse } from '~/modules/auth/api/session'
+import { useManagedStoragePlansQuery } from '~/modules/storage-plans'
 import { useStorageProvidersQuery } from '~/modules/storage-providers'
 
 const STORAGE_SETUP_PATH = '/photos/storage'
@@ -28,19 +29,38 @@ export function useRequireStorageProvider({ session, isLoading }: UseRequireStor
     enabled: shouldCheck,
   })
 
+  const managedStoragePlansQuery = useManagedStoragePlansQuery({
+    enabled: shouldCheck,
+  })
+
+  const hasManagedStoragePlan =
+    managedStoragePlansQuery.isSuccess &&
+    managedStoragePlansQuery.data.managedStorageEnabled &&
+    Boolean(managedStoragePlansQuery.data.currentPlanId)
+
+  const isCheckingManagedStoragePlan = managedStoragePlansQuery.isPending
+
   const needsSetup =
     shouldCheck &&
     storageProvidersQuery.isSuccess &&
     (storageProvidersQuery.data?.providers.length ?? 0) === 0 &&
-    !storageProvidersQuery.isFetching
+    !storageProvidersQuery.isFetching &&
+    !isCheckingManagedStoragePlan &&
+    !hasManagedStoragePlan
 
+  const navigateOnceRef = useRef(false)
   useEffect(() => {
+    if (navigateOnceRef.current) {
+      return
+    }
     if (!needsSetup) {
       return
     }
     if (pathname === STORAGE_SETUP_PATH) {
       return
     }
+
+    navigateOnceRef.current = true
 
     navigate(STORAGE_SETUP_PATH, { replace: true })
   }, [navigate, needsSetup, pathname])

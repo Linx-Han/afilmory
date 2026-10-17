@@ -2,7 +2,7 @@
 title: B2 (Backblaze B2)
 description: Configure Backblaze B2 storage for cost-effective cloud storage.
 createdAt: 2025-11-14T22:10:00+08:00
-lastModified: 2025-11-23T19:40:52+08:00
+lastModified: 2025-12-05T15:28:22+08:00
 order: 33
 ---
 
@@ -86,11 +86,15 @@ Compare with AWS S3 to see which fits your usage pattern better.
 ## Troubleshooting
 
 **Authentication errors:**
+
 - Verify `B2_KEY_ID` and `B2_KEY` are correct
 - Check that the application key has read permissions
 - Ensure the bucket ID and name match your B2 bucket
 
 **Rate limiting:**
+
 - B2 has generous rate limits, but very high concurrency may still hit limits
 - Reduce concurrency if needed
+
+
 

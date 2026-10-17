@@ -1,15 +1,17 @@
+import type { Buffer } from 'node:buffer'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+import type { PhotoManifestItem, PickedExif, ToneAnalysis } from '@afilmory/typing'
 import { decompressUint8Array } from '@afilmory/utils'
-import type sharp from 'sharp'
+import type { Sharp } from 'sharp'
 
 import { HEIC_FORMATS } from '../constants/index.js'
 import { extractExifData } from '../image/exif.js'
 import { calculateHistogramAndAnalyzeTone } from '../image/histogram.js'
 import { generateThumbnailAndBlurhash, thumbnailExists } from '../image/thumbnail.js'
 import { workdir } from '../path.js'
-import type { PhotoManifestItem, PickedExif, ToneAnalysis } from '../types/photo.js'
+import { getPhotoExecutionContext } from './execution-context.js'
 import { getGlobalLoggers } from './logger-adapter.js'
 import type { PhotoProcessorOptions } from './processor.js'
 
@@ -30,13 +32,15 @@ export async function processThumbnailAndBlurhash(
   options: PhotoProcessorOptions,
 ): Promise<ThumbnailResult> {
   const loggers = getGlobalLoggers()
+  const { builder } = getPhotoExecutionContext()
+  const { limitInputPixels } = builder.getConfig().system.processing
 
   // 检查是否可以复用现有数据
   if (
-    !options.isForceMode &&
-    !options.isForceThumbnails &&
-    existingItem?.thumbHash &&
-    (await thumbnailExists(photoId))
+    !options.isForceMode
+    && !options.isForceThumbnails
+    && existingItem?.thumbHash
+    && (await thumbnailExists(photoId))
   ) {
     try {
       const thumbnailPath = path.join(workdir, 'public/thumbnails', `${photoId}.jpg`)
@@ -51,7 +55,8 @@ export async function processThumbnailAndBlurhash(
         thumbnailBuffer,
         thumbHash: decompressUint8Array(existingItem.thumbHash),
       }
-    } catch (error) {
+    }
+    catch (error) {
       loggers.thumbnail.warn(`读取现有缩略图失败，重新生成：${photoId}`, error)
       // 继续执行生成逻辑
     }
@@ -62,6 +67,8 @@ export async function processThumbnailAndBlurhash(
     imageBuffer,
     photoId,
     options.isForceMode || options.isForceThumbnails,
+    !options.dryRun,
+    limitInputPixels,
   )
 
   return {
@@ -103,7 +110,7 @@ export async function processExifData(
  * 优先复用现有数据，如果不存在或需要强制更新则重新计算
  */
 export async function processToneAnalysis(
-  sharpInstance: sharp.Sharp,
+  sharpInstance: Sharp,
   photoKey: string,
   existingItem: PhotoManifestItem | undefined,
   options: PhotoProcessorOptions,

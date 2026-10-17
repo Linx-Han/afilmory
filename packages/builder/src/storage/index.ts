@@ -20,6 +20,7 @@ export type { StorageProviderFactory, StorageProviderRegistrationOptions } from 
 export { StorageFactory } from './factory.js'
 
 // 导出管理器
+export type { StorageUploadProgress, StorageUploadProgressHandler } from './interfaces.js'
 export { StorageManager } from './manager.js'
 
 // 导出具体提供商（如果需要直接使用）

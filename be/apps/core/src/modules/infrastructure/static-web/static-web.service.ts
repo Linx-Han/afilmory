@@ -2,8 +2,8 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import type { PhotoManifestItem } from '@afilmory/builder'
-import { SiteSettingService } from 'core/modules/configuration/site-setting/site-setting.service'
-import { ManifestService } from 'core/modules/content/manifest/manifest.service'
+import { SiteSettingService } from '@core/modules/configuration/site-setting/site-setting.service'
+import { ManifestService } from '@core/modules/content/manifest/manifest.service'
 import type { Context } from 'hono'
 import { DOMParser } from 'linkedom'
 import { injectable } from 'tsyringe'
@@ -63,6 +63,10 @@ export class StaticWebService extends StaticAssetService {
       assetLinkRels: STATIC_WEB_ASSET_LINK_RELS,
       loggerName: 'StaticWebService',
       staticAssetHostResolver: (requestHost) => this.staticAssetHostService.getStaticAssetHost(requestHost),
+      devBuildCommand: {
+        command: 'pnpm --filter @afilmory/web build',
+        env: { BUILD_FOR_SERVER_SERVE: '1', AFILMORY_EMBED_MANIFEST: 'false' },
+      },
     })
   }
 
@@ -97,13 +101,53 @@ export class StaticWebService extends StaticAssetService {
       const document = DOM_PARSER.parseFromString(html, 'text/html') as unknown as StaticAssetDocument
       this.removeExistingSocialMeta(document)
       this.updateDocumentTitle(document, `${photo.id} | ${siteTitle}`)
-      this.insertOpenGraphTags(document, photo, origin, siteTitle)
-      this.insertTwitterTags(document, photo, origin, siteTitle)
+      this.insertSocialMetaTags(document, {
+        title: `${photo.id} on ${siteTitle}`,
+        description: photo.description || '',
+        image: `${origin}/og/${photo.id}`,
+        url: `${origin}/${photo.id}`,
+      })
+      this.injectFaviconLinks(document)
 
       const serialized = document.documentElement.outerHTML
       return this.createManualHtmlResponse(serialized, headers, 200)
     } catch (error) {
       this.logger.error('Failed to inject Open Graph tags for photo page', { error })
+      return this.createManualHtmlResponse(html, headers, response.status)
+    }
+  }
+
+  async decorateHomepageResponse(context: Context, response: Response): Promise<Response> {
+    const contentType = response.headers.get('content-type') ?? ''
+    if (!contentType.toLowerCase().includes('text/html')) {
+      return response
+    }
+
+    const html = await response.text()
+    const headers = new Headers(response.headers)
+    const siteConfig = await this.siteSettingService.getSiteConfig()
+    const siteTitle = siteConfig.title?.trim() || siteConfig.name || 'Photo Gallery'
+    const origin = this.resolveRequestOrigin(context)
+    if (!origin) {
+      return this.createManualHtmlResponse(html, headers, response.status)
+    }
+
+    try {
+      const document = DOM_PARSER.parseFromString(html, 'text/html') as unknown as StaticAssetDocument
+      this.removeExistingSocialMeta(document)
+      const description = siteConfig.description?.trim() || ''
+      this.insertSocialMetaTags(document, {
+        title: siteTitle,
+        description,
+        image: `${origin}/og`,
+        url: origin,
+      })
+      this.injectFaviconLinks(document)
+
+      const serialized = document.documentElement.outerHTML
+      return this.createManualHtmlResponse(serialized, headers, 200)
+    } catch (error) {
+      this.logger.error('Failed to inject Open Graph tags for homepage', { error })
       return this.createManualHtmlResponse(html, headers, response.status)
     }
   }
@@ -212,46 +256,75 @@ export class StaticWebService extends StaticAssetService {
     document.title = title
   }
 
-  private insertOpenGraphTags(
+  private insertSocialMetaTags(
     document: StaticAssetDocument,
-    photo: PhotoManifestItem,
-    origin: string,
-    siteTitle: string,
+    data: { title: string; description: string; image: string; url: string },
   ): void {
-    const tags: Record<string, string> = {
+    const ogTags: Record<string, string> = {
       'og:type': 'website',
-      'og:title': `${photo.id} on ${siteTitle}`,
-      'og:description': photo.description || '',
-      'og:image': `${origin}/og/${photo.id}`,
-      'og:url': `${origin}/${photo.id}`,
+      'og:title': data.title,
+      'og:description': data.description,
+      'og:image': data.image,
+      'og:url': data.url,
     }
 
-    for (const [property, content] of Object.entries(tags)) {
+    const twitterTags: Record<string, string> = {
+      'twitter:card': 'summary_large_image',
+      'twitter:title': data.title,
+      'twitter:description': data.description,
+      'twitter:image': data.image,
+    }
+
+    this.insertMetaTags(document, ogTags, 'property')
+    this.insertMetaTags(document, twitterTags, 'name')
+  }
+
+  private insertMetaTags(
+    document: StaticAssetDocument,
+    tags: Record<string, string>,
+    attributeName: 'property' | 'name',
+  ): void {
+    for (const [key, content] of Object.entries(tags)) {
       const element = document.createElement('meta')
-      element.setAttribute('property', property)
+      element.setAttribute(attributeName, key)
       element.setAttribute('content', content)
       document.head?.append(element)
     }
   }
 
-  private insertTwitterTags(
-    document: StaticAssetDocument,
-    photo: PhotoManifestItem,
-    origin: string,
-    siteTitle: string,
-  ): void {
-    const tags: Record<string, string> = {
-      'twitter:card': 'summary_large_image',
-      'twitter:title': `${photo.id} on ${siteTitle}`,
-      'twitter:description': photo.description || '',
-      'twitter:image': `${origin}/og/${photo.id}`,
+  private injectFaviconLinks(document: StaticAssetDocument): void {
+    if (!document.head) {
+      return
     }
 
-    for (const [name, content] of Object.entries(tags)) {
-      const element = document.createElement('meta')
-      element.setAttribute('name', name)
-      element.setAttribute('content', content)
-      document.head?.append(element)
+    const faviconLinks = [
+      { rel: 'apple-touch-icon', sizes: '180x180', href: '/static/web/apple-touch-icon.png' },
+      { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/static/web/favicon-32x32.png' },
+      { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/static/web/favicon-16x16.png' },
+      { rel: 'manifest', href: '/static/web/site.webmanifest' },
+      { rel: 'shortcut icon', href: '/static/web/favicon.ico' },
+    ]
+
+    for (const linkAttrs of faviconLinks) {
+      // Check if link already exists to avoid duplicates
+      const existingLink = Array.from(document.head.querySelectorAll('link')).find((link) => {
+        const rel = link.getAttribute('rel')
+        const href = link.getAttribute('href')
+        return rel === linkAttrs.rel && href === linkAttrs.href
+      })
+
+      if (!existingLink) {
+        const linkElement = document.createElement('link')
+        linkElement.setAttribute('rel', linkAttrs.rel)
+        linkElement.setAttribute('href', linkAttrs.href)
+        if (linkAttrs.sizes) {
+          linkElement.setAttribute('sizes', linkAttrs.sizes)
+        }
+        if (linkAttrs.type) {
+          linkElement.setAttribute('type', linkAttrs.type)
+        }
+        document.head.append(linkElement)
+      }
     }
   }
 

@@ -1,40 +1,47 @@
 import { systemSettings } from '@afilmory/db'
-import { DbAccessor } from 'core/database/database.provider'
+import { DbAccessor } from '@core/database/database.provider'
+import { EventEmitterService } from '@tsuki-hono/event-emitter'
 import { eq, inArray } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 
+import type { SystemSettingKey as SystemSettingLiteralKey } from './system-setting.constants'
 import type {
   SystemSettingEntryInput,
-  SystemSettingKey,
+  SystemSettingKey as SystemSettingStoreKey,
   SystemSettingRecord,
   SystemSettingSetOptions,
 } from './system-setting.store.types'
 
 @injectable()
 export class SystemSettingStore {
-  constructor(private readonly dbAccessor: DbAccessor) {}
+  constructor(
+    private readonly dbAccessor: DbAccessor,
+    private readonly eventService: EventEmitterService,
+  ) {}
 
-  async get(key: SystemSettingKey): Promise<SystemSettingRecord['value']> {
+  async get(key: SystemSettingStoreKey): Promise<SystemSettingRecord['value']> {
     const record = await this.find(key)
     return record?.value ?? null
   }
 
-  async getMany(keys: readonly SystemSettingKey[]): Promise<Record<SystemSettingKey, SystemSettingRecord['value']>> {
+  async getMany(
+    keys: readonly SystemSettingStoreKey[],
+  ): Promise<Record<SystemSettingStoreKey, SystemSettingRecord['value']>> {
     if (keys.length === 0) {
-      return {} as Record<SystemSettingKey, SystemSettingRecord['value']>
+      return {} as Record<SystemSettingStoreKey, SystemSettingRecord['value']>
     }
 
     const uniqueKeys = Array.from(new Set(keys))
     const db = this.dbAccessor.get()
     const records = await db.select().from(systemSettings).where(inArray(systemSettings.key, uniqueKeys))
 
-    const map = new Map<SystemSettingKey, SystemSettingRecord>(records.map((record) => [record.key, record]))
+    const map = new Map<SystemSettingStoreKey, SystemSettingRecord>(records.map((record) => [record.key, record]))
     return uniqueKeys.reduce(
       (acc, key) => {
         acc[key] = map.get(key)?.value ?? null
         return acc
       },
-      Object.create(null) as Record<SystemSettingKey, SystemSettingRecord['value']>,
+      Object.create(null) as Record<SystemSettingStoreKey, SystemSettingRecord['value']>,
     )
   }
 
@@ -44,7 +51,7 @@ export class SystemSettingStore {
   }
 
   async set(
-    key: SystemSettingKey,
+    key: SystemSettingStoreKey,
     value: SystemSettingRecord['value'],
     options: SystemSettingSetOptions = {},
   ): Promise<void> {
@@ -73,6 +80,11 @@ export class SystemSettingStore {
           updatedAt: now,
         },
       })
+
+    this.eventService.emit('system.setting.updated', {
+      key: key as SystemSettingLiteralKey,
+      value: String(value),
+    })
   }
 
   async setMany(entries: readonly SystemSettingEntryInput[]): Promise<void> {
@@ -81,12 +93,12 @@ export class SystemSettingStore {
     }
   }
 
-  async delete(key: SystemSettingKey): Promise<void> {
+  async delete(key: SystemSettingStoreKey): Promise<void> {
     const db = this.dbAccessor.get()
     await db.delete(systemSettings).where(eq(systemSettings.key, key))
   }
 
-  private async find(key: SystemSettingKey): Promise<SystemSettingRecord | null> {
+  private async find(key: SystemSettingStoreKey): Promise<SystemSettingRecord | null> {
     return await this.findRaw(key)
   }
 

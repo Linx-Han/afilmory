@@ -1,3 +1,4 @@
+import { useInputComposition } from '@afilmory/hooks'
 import { clsxm } from '@afilmory/utils'
 import type { InputHTMLAttributes } from 'react'
 
@@ -36,20 +37,28 @@ export const Input = ({
   error,
   className,
   ...props
-}: InputProps & { ref?: React.RefObject<HTMLInputElement | null> }) => (
-  <input
-    ref={ref}
-    className={clsxm(
-      'w-full rounded border border-fill-tertiary bg-background',
-      'px-3 py-2 text-sm text-text placeholder:text-text-tertiary/70',
-      'focus:outline-none focus:ring-2 focus:ring-accent/40',
-      'transition-all duration-200',
-      'disabled:cursor-not-allowed disabled:opacity-60',
-      error && 'border-red/60 focus:ring-red/30',
-      className,
-    )}
-    {...props}
-  />
-)
+}: InputProps & { ref?: React.RefObject<HTMLInputElement | null> }) => {
+  const inputCompositionProps = useInputComposition({
+    onKeyDown: props.onKeyDown,
+    onCompositionEnd: props.onCompositionEnd,
+    onCompositionStart: props.onCompositionStart,
+  })
+  return (
+    <input
+      ref={ref}
+      className={clsxm(
+        'w-full rounded border border-fill-tertiary bg-background',
+        'px-3 py-2 text-sm text-text placeholder:text-text-tertiary/70',
+        'focus:outline-none focus:ring-2 focus:ring-accent/40',
+        'transition-all duration-200',
+        'disabled:cursor-not-allowed disabled:opacity-60',
+        error && 'border-red/60 focus:ring-red/30',
+        className,
+      )}
+      {...props}
+      {...inputCompositionProps}
+    />
+  )
+}
 
 Input.displayName = 'Input'

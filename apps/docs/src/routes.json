@@ -17,7 +17,7 @@
       "title": "CLI & Run Modes",
       "description": "Per-run flags, concurrency behavior, and cluster vs worker execution.",
       "createdAt": "2025-11-23T19:00:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2026-08-13T23:17:31+08:00",
       "order": "2"
     }
   },
@@ -28,7 +28,7 @@
       "title": "Quick Start",
       "description": "Get your gallery running in about 5 minutes.",
       "createdAt": "2025-11-14T22:20:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2025-12-05T15:28:22+08:00",
       "order": "2"
     }
   },
@@ -48,9 +48,9 @@
     "title": "Configuration",
     "meta": {
       "title": "Configuration",
-      "description": "How to declare storage, system defaults, and plugins in builder.config.ts.",
+      "description": "How to declare storage, system defaults, XMP toggles, and plugins in builder.config.ts.",
       "createdAt": "2025-11-23T19:00:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2026-08-13T23:55:00+08:00",
       "order": "3"
     }
   },
@@ -61,7 +61,7 @@
       "title": "Processing Flow",
       "description": "End-to-end pipeline, ordering, and incremental rules backed by the code.",
       "createdAt": "2025-11-23T19:00:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2026-08-08T03:38:03+08:00",
       "order": "4"
     }
   },
@@ -94,7 +94,7 @@
       "title": "Storage Providers",
       "description": "Choose a storage provider for your photo collection.",
       "createdAt": "2025-11-14T22:40:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2025-12-05T15:28:22+08:00",
       "order": "30"
     }
   },
@@ -105,7 +105,7 @@
       "title": "S3 / S3-Compatible",
       "description": "Configure S3 or S3-compatible storage for your photo collection.",
       "createdAt": "2025-11-14T22:10:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2025-12-05T15:28:22+08:00",
       "order": "32"
     }
   },
@@ -116,7 +116,7 @@
       "title": "B2 (Backblaze B2)",
       "description": "Configure Backblaze B2 storage for cost-effective cloud storage.",
       "createdAt": "2025-11-14T22:10:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2025-12-05T15:28:22+08:00",
       "order": "33"
     }
   },
@@ -127,7 +127,7 @@
       "title": "GitHub Storage",
       "description": "Use a GitHub repository as photo storage for simple deployments.",
       "createdAt": "2025-11-14T22:10:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2025-12-05T15:28:22+08:00",
       "order": "34"
     }
   },
@@ -138,7 +138,7 @@
       "title": "Local Storage",
       "description": "Use local file system paths for development and self-hosting.",
       "createdAt": "2025-11-14T22:10:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2025-12-05T15:28:22+08:00",
       "order": "35"
     }
   },
@@ -149,7 +149,7 @@
       "title": "SaaS Architecture",
       "description": "Tenant model, domain routing, OAuth flow, and data injection paths.",
       "createdAt": "2025-11-23T20:20:00+08:00",
-      "lastModified": "2025-11-23T20:44:02+08:00",
+      "lastModified": "2026-08-06T20:44:28+08:00",
       "order": "36"
     }
   },
@@ -160,7 +160,7 @@
       "title": "Eagle Storage",
       "description": "Publish directly from an Eagle 4 library with filtering support.",
       "createdAt": "2025-11-14T22:10:00+08:00",
-      "lastModified": "2025-11-23T19:40:52+08:00",
+      "lastModified": "2025-12-05T15:28:22+08:00",
       "order": "36"
     }
   },
@@ -171,8 +171,30 @@
       "title": "SaaS Deployment",
       "description": "Deploy the multi-tenant stack (core API + OAuth gateway) with subdomains and custom domains.",
       "createdAt": "2025-11-23T19:50:00+08:00",
-      "lastModified": "2025-11-23T20:44:02+08:00",
+      "lastModified": "2026-08-06T20:44:28+08:00",
       "order": "37"
+    }
+  },
+  {
+    "path": "/storage/providers/oss",
+    "title": "Aliyun OSS",
+    "meta": {
+      "title": "Aliyun OSS",
+      "description": "Configure Aliyun Object Storage Service (OSS) for China-mainland friendly deployments.",
+      "createdAt": "2025-11-24T10:05:00+08:00",
+      "lastModified": "2025-11-24T22:26:48+08:00",
+      "order": "37"
+    }
+  },
+  {
+    "path": "/storage/providers/cos",
+    "title": "Tencent COS",
+    "meta": {
+      "title": "Tencent COS",
+      "description": "Configure Tencent Cloud Object Storage (COS) for deployments within the Tencent ecosystem.",
+      "createdAt": "2025-11-24T10:06:00+08:00",
+      "lastModified": "2025-11-24T22:26:48+08:00",
+      "order": "38"
     }
   },
   {
@@ -180,9 +202,9 @@
     "title": "Builder",
     "meta": {
       "title": "Builder",
-      "description": "Overview of the photo pipeline and how to choose the right entrypoint for your run.",
+      "description": "Overview of the photo pipeline, XMP support, and how to choose the right entrypoint for your run.",
       "createdAt": "2025-11-14T22:10:00+08:00",
-      "lastModified": "2025-11-23T20:44:02+08:00",
+      "lastModified": "2026-08-08T03:38:03+08:00",
       "order": "40"
     }
   },
@@ -224,7 +246,7 @@
     "title": "Cloudflare Pages",
     "meta": {
       "title": "Cloudflare Pages",
-      "description": "Deploy your gallery to Cloudflare Pages for fast global CDN distribution.",
+      "description": "Guide to deploying Afilmory via Cloudflare Pages.",
       "createdAt": "2025-07-20T22:35:03+08:00",
       "lastModified": "2025-11-23T19:40:52+08:00",
       "order": "53"

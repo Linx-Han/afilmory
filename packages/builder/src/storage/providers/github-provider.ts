@@ -256,6 +256,19 @@ export class GitHubStorageProvider implements StorageProvider {
     }
   }
 
+  async deleteFolder(prefix: string): Promise<void> {
+    const normalizedPrefix = this.normalizePrefix(prefix)
+    const targetPrefix = normalizedPrefix ? `${normalizedPrefix}/` : ''
+    const allFiles = await this.listAllFiles()
+    const keysToDelete = allFiles
+      .map((file) => file.key)
+      .filter((key): key is string => Boolean(key) && (!targetPrefix || key.startsWith(targetPrefix)))
+
+    for (const key of keysToDelete) {
+      await this.deleteFile(key)
+    }
+  }
+
   async uploadFile(key: string, data: Buffer, _options?: StorageUploadOptions): Promise<StorageObject> {
     const metadata = await this.fetchContentMetadata(key)
     const fullPath = this.getFullPath(key)
@@ -328,6 +341,12 @@ export class GitHubStorageProvider implements StorageProvider {
   generatePublicUrl(key: string): string {
     const fullPath = this.getFullPath(key)
 
+    // 如果设置了自定义 CDN 域名，直接使用
+    if (this.githubConfig.customDomain) {
+      const customDomain = this.githubConfig.customDomain.replace(/\/+$/, '') // 移除末尾的斜杠
+      return `https://${customDomain.replace(/^https?:\/\//, '')}/${fullPath}`
+    }
+
     if (this.githubConfig.useRawUrl) {
       // 使用 raw.githubusercontent.com 获取文件
       return `https://raw.githubusercontent.com/${this.githubConfig.owner}/${this.githubConfig.repo}/${this.githubConfig.branch}/${fullPath}`
@@ -371,8 +390,8 @@ export class GitHubStorageProvider implements StorageProvider {
         if (SUPPORTED_FORMATS.has(ext)) {
           imageFile = file
         }
-        // 检查是否为 .mov 视频文件
-        else if (ext === '.mov') {
+        // 检查是否为 .mov 或 .mp4 视频文件
+        else if (ext === '.mov' || ext === '.mp4') {
           videoFile = file
         }
       }
@@ -384,5 +403,9 @@ export class GitHubStorageProvider implements StorageProvider {
     }
 
     return livePhotoMap
+  }
+
+  private normalizePrefix(prefix: string): string {
+    return prefix.replaceAll('\\', '/').replaceAll(/^\/+|\/+$/g, '')
   }
 }

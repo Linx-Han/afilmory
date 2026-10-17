@@ -197,6 +197,12 @@ export const tocData: FileToc[] = [
             "children": []
           },
           {
+            "id": "heading-xmp-regions",
+            "level": 2,
+            "text": "XMP regions",
+            "children": []
+          },
+          {
             "id": "heading-how-to-run-it",
             "level": 2,
             "text": "How to run it",
@@ -267,6 +273,12 @@ export const tocData: FileToc[] = [
             "children": []
           },
           {
+            "id": "heading-debugging-safe-inspection",
+            "level": 2,
+            "text": "Debugging & safe inspection",
+            "children": []
+          },
+          {
             "id": "heading-concurrency-execution-model",
             "level": 2,
             "text": "Concurrency & execution model",
@@ -317,6 +329,12 @@ export const tocData: FileToc[] = [
             "children": []
           },
           {
+            "id": "heading-xmp-extraction-control",
+            "level": 2,
+            "text": "XMP extraction control",
+            "children": []
+          },
+          {
             "id": "heading-plugins-array",
             "level": 2,
             "text": "Plugins array",
@@ -352,6 +370,12 @@ export const tocData: FileToc[] = [
             "id": "heading-outputs",
             "level": 2,
             "text": "Outputs",
+            "children": []
+          },
+          {
+            "id": "heading-viewer-behavior-for-regions",
+            "level": 2,
+            "text": "Viewer behavior for regions",
             "children": []
           },
           {
@@ -557,6 +581,12 @@ export const tocData: FileToc[] = [
             "children": []
           },
           {
+            "id": "heading-quick-deploy",
+            "level": 2,
+            "text": "Quick Deploy",
+            "children": []
+          },
+          {
             "id": "heading-deployment-steps",
             "level": 2,
             "text": "Deployment Steps",
@@ -631,9 +661,21 @@ export const tocData: FileToc[] = [
             "children": []
           },
           {
+            "id": "heading-limitations",
+            "level": 2,
+            "text": "Limitations",
+            "children": []
+          },
+          {
             "id": "heading-next-steps",
             "level": 2,
             "text": "Next Steps",
+            "children": []
+          },
+          {
+            "id": "heading-learn-more",
+            "level": 2,
+            "text": "Learn more",
             "children": []
           }
         ]
@@ -1420,6 +1462,18 @@ export const tocData: FileToc[] = [
                 "children": []
               },
               {
+                "id": "heading-aliyun-ossstorageprovidersoss",
+                "level": 3,
+                "text": "[Aliyun OSS](/storage/providers/oss)",
+                "children": []
+              },
+              {
+                "id": "heading-tencent-cosstorageproviderscos",
+                "level": 3,
+                "text": "[Tencent COS](/storage/providers/cos)",
+                "children": []
+              },
+              {
                 "id": "heading-b2-backblaze-b2storageprovidersb2",
                 "level": 3,
                 "text": "[B2 (Backblaze B2)](/storage/providers/b2)",
@@ -1505,6 +1559,50 @@ export const tocData: FileToc[] = [
             "id": "heading-cost-considerations",
             "level": 2,
             "text": "Cost Considerations",
+            "children": []
+          },
+          {
+            "id": "heading-troubleshooting",
+            "level": 2,
+            "text": "Troubleshooting",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "storage/providers/cos.mdx",
+    "path": "/storage/providers/cos",
+    "title": "Tencent COS",
+    "toc": [
+      {
+        "id": "heading-tencent-cos-storage",
+        "level": 1,
+        "text": "Tencent COS Storage",
+        "children": [
+          {
+            "id": "heading-configuration",
+            "level": 2,
+            "text": "Configuration",
+            "children": []
+          },
+          {
+            "id": "heading-environment-variables",
+            "level": 2,
+            "text": "Environment Variables",
+            "children": []
+          },
+          {
+            "id": "heading-cos-specific-considerations",
+            "level": 2,
+            "text": "COS-specific Considerations",
+            "children": []
+          },
+          {
+            "id": "heading-best-practices",
+            "level": 2,
+            "text": "Best Practices",
             "children": []
           },
           {
@@ -1658,6 +1756,12 @@ export const tocData: FileToc[] = [
             "children": []
           },
           {
+            "id": "heading-custom-cdn-domain",
+            "level": 2,
+            "text": "Custom CDN Domain",
+            "children": []
+          },
+          {
             "id": "heading-private-repositories",
             "level": 2,
             "text": "Private Repositories",
@@ -1736,6 +1840,50 @@ export const tocData: FileToc[] = [
             "id": "heading-serving-originals",
             "level": 2,
             "text": "Serving Originals",
+            "children": []
+          },
+          {
+            "id": "heading-best-practices",
+            "level": 2,
+            "text": "Best Practices",
+            "children": []
+          },
+          {
+            "id": "heading-troubleshooting",
+            "level": 2,
+            "text": "Troubleshooting",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "storage/providers/oss.mdx",
+    "path": "/storage/providers/oss",
+    "title": "Aliyun OSS",
+    "toc": [
+      {
+        "id": "heading-aliyun-oss-storage",
+        "level": 1,
+        "text": "Aliyun OSS Storage",
+        "children": [
+          {
+            "id": "heading-configuration",
+            "level": 2,
+            "text": "Configuration",
+            "children": []
+          },
+          {
+            "id": "heading-environment-variables",
+            "level": 2,
+            "text": "Environment Variables",
+            "children": []
+          },
+          {
+            "id": "heading-notes-on-endpoints",
+            "level": 2,
+            "text": "Notes on Endpoints",
             "children": []
           },
           {

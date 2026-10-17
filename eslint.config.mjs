@@ -12,6 +12,12 @@ const rootIgnores = globalIgnores([
   'apps/ssr/public/**',
   'apps/web/public/**',
   'packages/docs/public/**',
+  'apps/mobile/ios/**',
+  'apps/mobile/android/**',
+  'apps/mobile/.expo/**',
+  'apps/mobile/expo-env.d.ts',
+  'apps/mobile/Tests/Fixtures/**',
+  'scripts/webgpu-hdr-spike/**',
 ])
 
 const hyobanConfig = await defineConfig(
@@ -20,7 +26,6 @@ const hyobanConfig = await defineConfig(
     lessOpinionated: true,
     preferESM: false,
     react: true,
-    tailwindCSS: true,
   },
 
   {
@@ -41,6 +46,7 @@ const hyobanConfig = await defineConfig(
       },
     },
     rules: {
+      'unicorn/prefer-response-static-json': 0,
       'unicorn/no-abusive-eslint-disable': 0,
       '@typescript-eslint/triple-slash-reference': 0,
       'unicorn/prefer-math-trunc': 'off',
@@ -72,13 +78,17 @@ const hyobanConfig = await defineConfig(
 
       'unicorn/no-array-callback-reference': 'off',
 
+      'ts/no-use-before-define': 'off',
+      'style/multiline-ternary': 'off',
+      'e18e/prefer-static-regex': 'off',
+
       'no-restricted-globals': [
         'error',
         {
           name: 'location',
           message:
-            "Since you don't use the same router instance in electron and browser, you can't use the global location to get the route info. \n\n" +
-            'You can use `useLocaltion` or `getReadonlyRoute` to get the route info.',
+            'Since you don\'t use the same router instance in electron and browser, you can\'t use the global location to get the route info. \n\n'
+            + 'You can use `useLocaltion` or `getReadonlyRoute` to get the route info.',
         },
       ],
     },
@@ -109,6 +119,16 @@ const hyobanConfig = await defineConfig(
     files: ['be/packages/framework/**/*.{ts,tsx}'],
     rules: {
       'react-hooks/rules-of-hooks': 'off',
+    },
+  },
+
+  // Expo inlines EXPO_PUBLIC_* env vars only through literal `process.env` access,
+  // and expo-router route files / page definitions must export non-component values.
+  {
+    files: ['apps/mobile/**/*.{ts,tsx}'],
+    rules: {
+      'node/prefer-global/process': 'off',
+      'react-refresh/only-export-components': 'off',
     },
   },
 

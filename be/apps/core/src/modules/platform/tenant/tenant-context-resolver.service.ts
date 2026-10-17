@@ -1,13 +1,15 @@
-import { HttpContext } from '@afilmory/framework'
-import { DEFAULT_BASE_DOMAIN } from '@afilmory/utils'
-import { BizException, ErrorCode } from 'core/errors'
-import { logger } from 'core/helpers/logger.helper'
-import { AppStateService } from 'core/modules/app/app-state/app-state.service'
-import { SystemSettingService } from 'core/modules/configuration/system-setting/system-setting.service'
+import { decodeGatewayState } from '@afilmory/be-utils'
+import { env } from '@afilmory/env'
+import { DEFAULT_BASE_DOMAIN, isTenantSlugReserved } from '@afilmory/utils'
+import { BizException, ErrorCode } from '@core/errors'
+import { logger } from '@core/helpers/logger.helper'
+import { AppStateService } from '@core/modules/app/app-state/app-state.service'
+import { SystemSettingService } from '@core/modules/configuration/system-setting/system-setting.service'
+import { HttpContext } from '@tsuki-hono/common'
 import type { Context } from 'hono'
 import { injectable } from 'tsyringe'
 
-import { PLACEHOLDER_TENANT_SLUG, ROOT_TENANT_SLUG } from './tenant.constants'
+import { ROOT_TENANT_SLUG } from './tenant.constants'
 import { TenantService } from './tenant.service'
 import type { TenantAggregate, TenantContext } from './tenant.types'
 import { TenantDomainService } from './tenant-domain.service'
@@ -28,6 +30,7 @@ export interface TenantResolutionOptions {
 @injectable()
 export class TenantContextResolver {
   private readonly log = logger.extend('TenantResolver')
+  private readonly gatewayStateSecret = env.AUTH_GATEWAY_STATE_SECRET ?? env.CONFIG_ENCRYPTION_KEY
 
   constructor(
     private readonly tenantService: TenantService,
@@ -64,7 +67,7 @@ export class TenantContextResolver {
     if (host) {
       const domainMatch = await this.tenantDomainService.resolveTenantByDomain(host)
       if (domainMatch) {
-        tenantContext = this.asTenantContext(domainMatch, false, domainMatch.tenant.slug)
+        tenantContext = this.asTenantContext(domainMatch, domainMatch.tenant.slug)
         derivedSlug = domainMatch.tenant.slug
         this.log.verbose(
           `Resolved tenant by custom domain for request ${context.req.method} ${context.req.path} (host=${host})`,
@@ -74,6 +77,23 @@ export class TenantContextResolver {
 
     if (!derivedSlug) {
       derivedSlug = host ? (extractTenantSlugFromHost(host, baseDomain) ?? undefined) : undefined
+    }
+    if (
+      !derivedSlug &&
+      this.gatewayStateSecret &&
+      context.req.path.startsWith('/api/auth/callback/') &&
+      context.req.query
+    ) {
+      const gatewayState = context.req.query('gatewayState')
+      const state = context.req.query('state')
+      const decoded =
+        decodeGatewayState(gatewayState, { secret: this.gatewayStateSecret }) ||
+        decodeGatewayState(state, { secret: this.gatewayStateSecret })
+
+      if (decoded?.tenantSlug) {
+        derivedSlug = decoded.tenantSlug
+        this.log.verbose('Resolved tenant from gateway state during OAuth callback', { slug: derivedSlug })
+      }
     }
     if (!derivedSlug && this.isRootTenantPath(context.req.path)) {
       derivedSlug = ROOT_TENANT_SLUG
@@ -89,22 +109,23 @@ export class TenantContextResolver {
         {
           slug: derivedSlug,
         },
-        true,
+        { noThrow: true, allowPending: true },
       )
     }
 
-    if (!tenantContext && this.shouldFallbackToPlaceholder(derivedSlug)) {
-      const placeholder = await this.tenantService.ensurePlaceholderTenant()
-      tenantContext = this.asTenantContext(placeholder, true, requestedSlug)
+    if (!tenantContext && this.shouldAutoProvisionTenant(derivedSlug, context.req.path)) {
+      const pendingSlug = derivedSlug as string
+      const pending = await this.tenantService.ensurePendingTenant(pendingSlug)
+      tenantContext = this.asTenantContext(pending, requestedSlug)
       this.log.verbose(
-        `Applied placeholder tenant context for ${context.req.method} ${context.req.path} (host=${host ?? 'n/a'})`,
+        `Provisioned pending tenant context for ${context.req.method} ${context.req.path} (host=${host ?? 'n/a'})`,
       )
     } else if (tenantContext) {
-      tenantContext = this.asTenantContext(
-        tenantContext,
-        tenantContext.tenant.slug === PLACEHOLDER_TENANT_SLUG,
-        requestedSlug ?? tenantContext.tenant.slug ?? null,
-      )
+      tenantContext = {
+        tenant: tenantContext.tenant,
+        isPlaceholder: tenantContext.tenant.status !== 'active',
+        requestedSlug: requestedSlug ?? tenantContext.tenant.slug ?? null,
+      }
     }
 
     if (!tenantContext) {
@@ -175,18 +196,33 @@ export class TenantContextResolver {
     }
   }
 
-  private shouldFallbackToPlaceholder(slug?: string | null): boolean {
-    return !slug
+  private shouldAutoProvisionTenant(slug: string | null | undefined, path: string): boolean {
+    if (!slug || isTenantSlugReserved(slug)) {
+      return false
+    }
+    const normalizedPath = path?.trim() || ''
+    if (!normalizedPath) {
+      return false
+    }
+    if (normalizedPath === '/auth' || normalizedPath === '/auth/') {
+      return true
+    }
+    if (normalizedPath.startsWith('/auth/')) {
+      return true
+    }
+    if (normalizedPath === '/api/auth' || normalizedPath === '/api/auth/') {
+      return true
+    }
+    if (normalizedPath.startsWith('/api/auth/')) {
+      return true
+    }
+    return false
   }
 
-  private asTenantContext(
-    source: TenantAggregate,
-    isPlaceholder: boolean,
-    requestedSlug: string | null,
-  ): TenantContext {
+  private asTenantContext(source: TenantAggregate, requestedSlug: string | null): TenantContext {
     return {
       tenant: source.tenant,
-      isPlaceholder,
+      isPlaceholder: source.tenant.status !== 'active',
       requestedSlug,
     }
   }

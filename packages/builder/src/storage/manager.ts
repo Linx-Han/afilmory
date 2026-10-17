@@ -1,12 +1,49 @@
 import { StorageFactory } from './factory.js'
-import type { StorageConfig, StorageObject, StorageProvider, StorageUploadOptions } from './interfaces.js'
+import type {
+  StorageConfig,
+  StorageObject,
+  StorageProvider,
+  StorageUploadOptions,
+  StorageUploadProgress,
+  StorageUploadProgressHandler,
+} from './interfaces.js'
 
 export class StorageManager {
   protected provider: StorageProvider
+  protected currentConfig: StorageConfig
   private readonly excludeFilters: Array<(key: string) => boolean> = []
+  private uploadObserver?: StorageUploadProgressHandler
 
   constructor(config: StorageConfig) {
     this.provider = StorageFactory.createProvider(config)
+    this.currentConfig = config
+  }
+
+  setUploadObserver(observer?: StorageUploadProgressHandler): void {
+    this.uploadObserver = observer
+  }
+
+  clearUploadObserver(): void {
+    this.uploadObserver = undefined
+  }
+
+  private createProgressPipeline(
+    localHandler?: StorageUploadProgressHandler,
+  ): StorageUploadProgressHandler | undefined {
+    if (!localHandler && !this.uploadObserver) {
+      return undefined
+    }
+
+    return async (event: StorageUploadProgress) => {
+      const provider = event.provider ?? this.currentConfig?.provider
+      const enriched: StorageUploadProgress = provider ? { ...event, provider } : event
+      if (localHandler) {
+        await localHandler(enriched)
+      }
+      if (this.uploadObserver) {
+        await this.uploadObserver(enriched)
+      }
+    }
   }
 
   private applyExcludes<T extends StorageObject>(objects: T[]): T[] {
@@ -73,8 +110,49 @@ export class StorageManager {
     await this.provider.deleteFile(key)
   }
 
+  async deleteFolder(prefix: string): Promise<void> {
+    await this.provider.deleteFolder(prefix)
+  }
+
   async uploadFile(key: string, data: Buffer, options?: StorageUploadOptions): Promise<StorageObject> {
-    return await this.provider.uploadFile(key, data, options)
+    const bytes = data?.byteLength ?? 0
+    const progressHandler = this.createProgressPipeline(options?.onProgress)
+    const providerOptions = progressHandler ? { ...options, onProgress: progressHandler } : options
+
+    if (progressHandler) {
+      await progressHandler({
+        key,
+        status: 'start',
+        size: bytes || undefined,
+        bytesUploaded: bytes || undefined,
+        totalBytes: bytes || undefined,
+      })
+    }
+    const startedAt = Date.now()
+
+    try {
+      const uploaded = await this.provider.uploadFile(key, data, providerOptions)
+      const elapsedMs = Date.now() - startedAt
+      const resolvedSize = uploaded.size ?? (bytes || undefined)
+      if (progressHandler) {
+        await progressHandler({
+          key,
+          status: 'complete',
+          size: resolvedSize,
+          elapsedMs,
+        })
+      }
+      return uploaded
+    } catch (error) {
+      if (progressHandler) {
+        await progressHandler({
+          key,
+          status: 'error',
+          error,
+        })
+      }
+      throw error
+    }
   }
 
   async moveFile(sourceKey: string, targetKey: string, options?: StorageUploadOptions): Promise<StorageObject> {
@@ -145,5 +223,6 @@ export class StorageManager {
    */
   switchProvider(config: StorageConfig): void {
     this.provider = StorageFactory.createProvider(config)
+    this.currentConfig = config
   }
 }

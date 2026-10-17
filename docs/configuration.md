@@ -4,17 +4,19 @@
 
 - `name`, `title`, `description`, `url`, `accentColor`
 - `author`: `{ name, url, avatar }`
-- `social`: `{ github?, twitter?, rss? }`
+- `social`: `{ github?, twitter? }`
 - `feed`: optional `folo.challenge.feedId` and `userId`
 - `map`: e.g. `["maplibre"]`
 - `mapStyle`: `builtin` or provider style
 - `mapProjection`: `globe` or `mercator`
+- `viewer.regions.labelPlacement`: `edge` (default, label at the region corner) or `floating` (label centered above the region and moved below when needed)
 
 `config.json` merges into `site.config.ts` and is used by both SPA and SSR.
 
 ## Builder Config (`builder.config.ts`)
 
-Use `defineBuilderConfig` from `@afilmory/builder`. Recommended structure (see `builder.config.default.ts`):
+Use `defineBuilderConfig` from `@afilmory/builder`.
+Recommended structure (see `builder.config.default.ts`):
 
 - **storage**: provider (`s3`, `b2`, `github`, `local`, `eagle`), credentials, prefix, custom domain, `excludeRegex`, concurrency.
 - **system.processing**: `defaultConcurrency`, `enableLivePhotoDetection`, `digestSuffixLength`.

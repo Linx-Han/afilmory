@@ -61,6 +61,7 @@ const planI18nPrefixes = {
 } as const
 
 const QUOTA_LABEL_KEYS: Record<string, I18nKeys> = {
+  customDomainLimit: `${planI18nPrefixes.quotaLabelPrefix}customDomainLimit`,
   monthlyAssetProcessLimit: `${planI18nPrefixes.quotaLabelPrefix}monthlyAssetProcessLimit`,
   libraryItemLimit: `${planI18nPrefixes.quotaLabelPrefix}libraryItemLimit`,
   maxUploadSizeMb: `${planI18nPrefixes.quotaLabelPrefix}maxUploadSizeMb`,
@@ -68,21 +69,28 @@ const QUOTA_LABEL_KEYS: Record<string, I18nKeys> = {
 }
 
 const QUOTA_UNIT_KEYS: Record<string, I18nKeys | null> = {
+  customDomainLimit: null,
   monthlyAssetProcessLimit: `${planI18nPrefixes.quotaUnitPrefix}photos`,
   libraryItemLimit: `${planI18nPrefixes.quotaUnitPrefix}photos`,
   maxUploadSizeMb: `${planI18nPrefixes.quotaUnitPrefix}megabytes`,
   maxSyncObjectSizeMb: `${planI18nPrefixes.quotaUnitPrefix}megabytes`,
 }
 
+const PLAN_DESCRIPTION_KEYS: Record<string, I18nKeys> = {
+  free: 'plan.description.free',
+  pro: 'plan.description.pro',
+  friend: 'plan.description.friend',
+}
+
 export function Component() {
   const { t } = useTranslation()
   const planQuery = useTenantPlanQuery()
   const queryClient = useQueryClient()
-  const session = (queryClient.getQueryData<SessionResponse | null>(AUTH_SESSION_QUERY_KEY) ??
-    null) as SessionResponse | null
+  const session = (queryClient.getQueryData<SessionResponse | null>(AUTH_SESSION_QUERY_KEY)
+    ?? null) as SessionResponse | null
 
-  const tenantId = session?.tenant?.id ?? null
-  const tenantSlug = session?.tenant?.slug ?? null
+  const tenantId = session?.requestedWorkspace?.id ?? null
+  const tenantSlug = session?.requestedWorkspace?.slug ?? null
   const creemCustomerId = session?.user?.creemCustomerId ?? null
 
   const plan = planQuery.data?.plan ?? null
@@ -105,7 +113,8 @@ export function Component() {
       <div className="space-y-6">
         {planQuery.isError && (
           <div className="text-red text-sm">
-            {t(planI18nKeys.errorLoadPrefix)}{' '}
+            {t(planI18nKeys.errorLoadPrefix)}
+            {' '}
             {planQuery.error instanceof Error ? planQuery.error.message : t(planI18nKeys.errorUnknown)}
           </div>
         )}
@@ -141,7 +150,7 @@ function PlanList({
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      {plans.map((plan) => (
+      {plans.map(plan => (
         <PlanCard
           key={plan.planId}
           plan={plan}
@@ -172,11 +181,16 @@ function PlanCard({
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
   const productId = plan.payment?.creemProductId ?? null
+  const hasPortalAccount = Boolean(creemCustomerId)
+  const isFreePlan = plan.planId === 'free'
+  const hasProduct = Boolean(productId)
   const locale = i18n.language ?? i18n.resolvedLanguage ?? 'en'
   const quotaNumberFormatter = useMemo(() => new Intl.NumberFormat(locale), [locale])
 
   const canCheckout = Boolean(!isCurrent && tenantId && productId)
-
+  const showCheckoutButton = !isCurrent && hasProduct
+  const showDowngradeButton = !isCurrent && isFreePlan && hasPortalAccount
+  const showComingSoon = !isCurrent && !isFreePlan && !hasProduct
   const showPortalButton = isCurrent && plan.planId !== 'free' && Boolean(productId && creemCustomerId)
   const formatQuotaValue = (value: number | null, unitKey: I18nKeys | null) => {
     if (value === null || value === undefined) {
@@ -214,15 +228,17 @@ function PlanCard({
         return
       }
       toast.error(t(planI18nKeys.toastMissingCheckoutUrl))
-    } catch (error) {
+    }
+    catch (error) {
       toast.error(error instanceof Error ? error.message : t(planI18nKeys.toastCheckoutFailure))
-    } finally {
+    }
+    finally {
       setCheckoutLoading(false)
     }
   }
 
   const handlePortal = async () => {
-    if (!showPortalButton || !creemCustomerId) {
+    if (!(showPortalButton || showDowngradeButton) || !creemCustomerId) {
       toast.error(t(planI18nKeys.toastMissingPortalAccount))
       return
     }
@@ -238,9 +254,11 @@ function PlanCard({
         return
       }
       toast.error(t(planI18nKeys.toastMissingPortalUrl))
-    } catch (error) {
+    }
+    catch (error) {
       toast.error(error instanceof Error ? error.message : t(planI18nKeys.toastPortalFailure))
-    } finally {
+    }
+    finally {
       setPortalLoading(false)
     }
   }
@@ -250,7 +268,9 @@ function PlanCard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-text">{plan.name}</h2>
-          <p className="text-text-secondary text-sm">{plan.description}</p>
+          <p className="text-text-secondary text-sm">
+            {PLAN_DESCRIPTION_KEYS[plan.planId] ? t(PLAN_DESCRIPTION_KEYS[plan.planId]) : plan.description}
+          </p>
           {plan.pricing && plan.pricing.monthlyPrice !== null && plan.pricing.monthlyPrice !== undefined && (
             <p
               className={clsxm(
@@ -274,7 +294,7 @@ function PlanCard({
         ))}
       </ul>
 
-      {!isCurrent && (
+      {showCheckoutButton && (
         <Button
           type="button"
           className="mt-4 w-full"
@@ -282,11 +302,26 @@ function PlanCard({
           disabled={!canCheckout || checkoutLoading}
           onClick={handleCheckout}
         >
-          {checkoutLoading
-            ? t(planI18nKeys.checkoutLoading)
-            : canCheckout
-              ? t(planI18nKeys.checkoutUpgrade)
-              : t(planI18nKeys.checkoutComingSoon)}
+          {checkoutLoading ? t(planI18nKeys.checkoutLoading) : t(planI18nKeys.checkoutUpgrade)}
+        </Button>
+      )}
+
+      {showDowngradeButton && (
+        <Button
+          type="button"
+          variant="secondary"
+          className="mt-4 w-full"
+          size="sm"
+          disabled={portalLoading}
+          onClick={handlePortal}
+        >
+          {portalLoading ? t(planI18nKeys.portalLoading) : t(planI18nKeys.portalManage)}
+        </Button>
+      )}
+
+      {showComingSoon && (
+        <Button type="button" className="mt-4 w-full" size="sm" disabled>
+          {t(planI18nKeys.checkoutComingSoon)}
         </Button>
       )}
 
@@ -329,7 +364,7 @@ function PlanSkeleton() {
           <div className="bg-fill/50 h-6 w-1/2 animate-pulse rounded" />
           <div className="bg-fill/30 mt-2 h-4 w-2/3 animate-pulse rounded" />
           <div className="mt-6 space-y-2">
-            {Array.from({ length: 4 }).map((__, quotaIndex) => (
+            {Array.from({ length: 5 }).map((__, quotaIndex) => (
               <div key={`quota-${quotaIndex}`} className="bg-fill/20 h-4 animate-pulse rounded" />
             ))}
           </div>

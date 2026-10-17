@@ -1,6 +1,7 @@
 import path from 'node:path'
 
-import type { PhotoInfo, PickedExif } from '../types/photo.js'
+import type { PhotoInfo, PickedExif } from '@afilmory/typing'
+
 import { getPhotoExecutionContext } from './execution-context.js'
 import { getGlobalLoggers } from './logger-adapter.js'
 

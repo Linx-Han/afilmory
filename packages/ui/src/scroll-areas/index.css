@@ -1,0 +1,58 @@
+@property --mask-top {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --mask-bottom {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 30px;
+}
+
+.mask-scroller {
+  --mask-top: 0px;
+  --mask-bottom: 30px;
+  mask: linear-gradient(
+    to bottom,
+    transparent calc(var(--mask-top) - 30px),
+    black var(--mask-top),
+    black calc(100% - var(--mask-bottom)),
+    transparent calc(100% - var(--mask-bottom) + 30px)
+  );
+}
+
+@supports (animation-timeline: scroll(self block)) {
+  .mask-scroller {
+    animation-name: mask-up, mask-down;
+    animation-duration: 1s, 1s;
+    animation-timing-function: linear, linear;
+    animation-fill-mode: both, both;
+    animation-timeline: scroll(self block), scroll(self block);
+    animation-range:
+      0 50px,
+      calc(100% - 50px) 100%;
+  }
+}
+@supports (animation-timeline: scroll()) and (not (animation-timeline: scroll(self block))) {
+  .mask-scroller {
+    animation-name: mask-up, mask-down;
+    animation-duration: 1s, 1s;
+    animation-timing-function: linear, linear;
+    animation-fill-mode: both, both;
+    animation-timeline: scroll(), scroll();
+    animation-range:
+      0 50px,
+      calc(100% - 50px) 100%;
+  }
+}
+@keyframes mask-up {
+  to {
+    --mask-top: 30px;
+  }
+}
+@keyframes mask-down {
+  to {
+    --mask-bottom: 0px;
+  }
+}

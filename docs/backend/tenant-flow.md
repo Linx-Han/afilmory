@@ -9,8 +9,8 @@ This document describes how tenant resolution, Better Auth instances, and dashbo
    - Calls `AuthProvider.getAuth()` so downstream handlers reuse the tenant-aware Better Auth instance.
 2. `TenantContextResolver` inspects `x-forwarded-host`, `origin`, and `host` headers.
    - Extracts a slug via `tenant-host.utils.ts`.
-   - Loads the tenant aggregate; if none exists, falls back to the placeholder tenant.
-   - Always stores the original `requestedSlug` (even when placeholder) so downstream services know which workspace was requested.
+   - Loads the tenant aggregate; when a subdomain hits `/auth` or `/api/auth` for the first time, it auto-provisions a real tenant record with `status = "pending"` so auth flows have a fully-qualified tenant id.
+   - Always stores the original `requestedSlug` so downstream services know which workspace was requested.
 
 ## Auth Provider
 
@@ -19,7 +19,8 @@ This document describes how tenant resolution, Better Auth instances, and dashbo
   1. `HttpContext.tenant.requestedSlug`
   2. `HttpContext.tenant.slug`
   3. Derived from the host (when the context slug is still the placeholder).
-- Redirect URIs are always built as `<OAuthGateway>/api/auth/callback/:provider?tenantSlug=...`.
+- Redirect URIs are fixed to `<OAuthGateway>/api/auth/callback/:provider` (Google-friendly).
+- Tenant routing is encoded into the OAuth `state` value (HMAC wrapped) so the gateway can forward callbacks to the right tenant without dynamic redirect URIs.
 - Because the requested slug participates in the cache key, the same Better Auth instance handles both the `/auth/social` request and the gateway callback, preserving OAuth state.
 
 ## System Settings & Gateway
@@ -48,7 +49,7 @@ This document describes how tenant resolution, Better Auth instances, and dashbo
 }
 ```
 
-- When the resolver falls back to the placeholder tenant, `tenant.slug` still holds the requested subdomain, and `isPlaceholder` is `true`.
+- When a tenant is still provisioning (`status = "pending"`), `tenant.slug` still holds the requested subdomain, `isPlaceholder` is `true`, and the dashboard stays on the onboarding surface.
 - Consumers simply check `tenant.isPlaceholder` to know whether they are in onboarding.
 
 ## Dashboard Behavior
@@ -68,8 +69,8 @@ This document describes how tenant resolution, Better Auth instances, and dashbo
 3. User clicks “Sign in with GitHub” → `/auth/social` uses `requestedSlug` and redirects via the OAuth gateway.
 4. Gateway forwards the callback to `https://slug.example.com/api/auth/callback/github`.
 5. Resolver again sets `requestedSlug = "slug"`; Better Auth instance cache hits, so `state` matches.
-6. `/auth/session` returns `{ tenant: { slug: "slug", isPlaceholder: true } }` → dashboard stays on welcome, no cross-subdomain jump.
-7. Once the tenant is provisioned, future sessions have `isPlaceholder: false`, and `usePageRedirect` ensures we land on the actual workspace subdomain.
+6. `/auth/session` returns `{ tenant: { slug: "slug", isPlaceholder: true } }` while the workspace is pending → dashboard stays on welcome, no cross-subdomain jump.
+7. Once the onboarding API marks the tenant `active`, future sessions have `isPlaceholder: false`, and `usePageRedirect` ensures we land on the actual workspace subdomain.
 
 ## Key Guarantees
 

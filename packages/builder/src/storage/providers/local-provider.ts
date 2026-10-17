@@ -144,6 +144,10 @@ export class LocalStorageProvider implements StorageProvider {
     return resolvedPath
   }
 
+  private normalizePrefix(prefix: string): string {
+    return prefix.replaceAll('\\', '/').replaceAll(/^\/+|\/+$/g, '')
+  }
+
   private async syncDistFile(key: string, sourcePath: string): Promise<void> {
     if (!this.distPath) {
       return
@@ -168,6 +172,19 @@ export class LocalStorageProvider implements StorageProvider {
     }
   }
 
+  private async removeDistFolder(prefix: string): Promise<void> {
+    if (!this.distPath) {
+      return
+    }
+
+    const targetPath = prefix ? path.join(this.distPath, prefix) : this.distPath
+    try {
+      await fs.rm(targetPath, { recursive: true, force: true })
+    } catch (error) {
+      this.logger.warn(`删除 dist 目录失败：${targetPath}`, error)
+    }
+  }
+
   async deleteFile(key: string): Promise<void> {
     const filePath = this.resolveSafePath(key)
 
@@ -177,6 +194,20 @@ export class LocalStorageProvider implements StorageProvider {
       this.logger.success(`已删除本地文件：${key}`)
     } catch (error) {
       this.logger.error(`删除本地文件失败：${key}`, error)
+      throw error
+    }
+  }
+
+  async deleteFolder(prefix: string): Promise<void> {
+    const normalizedPrefix = this.normalizePrefix(prefix)
+    const targetPath = normalizedPrefix ? this.resolveSafePath(normalizedPrefix) : this.basePath
+
+    try {
+      await fs.rm(targetPath, { recursive: true, force: true })
+      await this.removeDistFolder(normalizedPrefix)
+      this.logger.success(`已删除本地目录：${normalizedPrefix || '.'}`)
+    } catch (error) {
+      this.logger.error(`删除本地目录失败：${normalizedPrefix || '.'}`, error)
       throw error
     }
   }
@@ -322,12 +353,16 @@ export class LocalStorageProvider implements StorageProvider {
         const baseName = path.parse(obj.key).name
         const dirName = path.dirname(obj.key)
 
-        // 查找对应的 .mov 文件
-        const videoKey = path.join(dirName, `${baseName}.mov`).replaceAll('\\', '/')
-        const videoObj = fileMap.get(videoKey.toLowerCase())
+        // 查找对应的 .mov 或 .mp4 文件
+        const videoExtensions = ['.mov', '.mp4']
+        for (const videoExt of videoExtensions) {
+          const videoKey = path.join(dirName, `${baseName}${videoExt}`).replaceAll('\\', '/')
+          const videoObj = fileMap.get(videoKey.toLowerCase())
 
-        if (videoObj) {
-          livePhotos.set(obj.key, videoObj)
+          if (videoObj) {
+            livePhotos.set(obj.key, videoObj)
+            break
+          }
         }
       }
     })

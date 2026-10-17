@@ -1,10 +1,22 @@
+import { hostname } from 'node:os'
+
 import type { NextRequest } from 'next/server'
+
+import { photoLoader } from '~/lib/photo-loader'
+
+function getDefaultCoreApiBase(): string {
+  // In Docker, HOSTNAME is set to the container ID, and localhost may not resolve correctly (IPv6 issues).
+  // Use os.hostname() which is resolvable within the Docker network.
+  const isDocker = process.env.HOSTNAME && /^[a-f0-9]{12,64}$/.test(process.env.HOSTNAME)
+  const host = isDocker ? hostname() : 'localhost'
+  return `http://${host}:3000`
+}
 
 const CORE_API_BASE =
   process.env.CORE_API_URL ??
   process.env.NEXT_PUBLIC_CORE_API_URL ??
   process.env.API_BASE_URL ??
-  'http://localhost:3000'
+  getDefaultCoreApiBase()
 
 const FORWARDED_HEADER_KEYS = ['cookie', 'authorization', 'x-forwarded-host', 'x-forwarded-proto', 'host']
 
@@ -38,13 +50,36 @@ function buildForwardHeaders(request: NextRequest): Headers {
 
 export const revalidate = 0
 
+function fallbackToThumbnail(request: NextRequest, photoId: string): Response {
+  const photo = photoLoader.getPhoto(photoId)
+
+  if (!photo?.thumbnailUrl) {
+    return new Response('Not Found', { status: 404 })
+  }
+
+  const thumbnailUrl = new URL(photo.thumbnailUrl, request.nextUrl).toString()
+  return Response.redirect(thumbnailUrl, 302)
+}
+
 export const GET = async (request: NextRequest, { params }: { params: Promise<{ photoId: string }> }) => {
   const { photoId } = await params
   const targetUrl = buildBackendUrl(photoId)
 
-  const response = await fetch(targetUrl, {
-    headers: buildForwardHeaders(request),
-  })
+  let response: Response
+  try {
+    response = await fetch(targetUrl, {
+      headers: buildForwardHeaders(request),
+    })
+  } catch {
+    // The core API is not deployed next to the SSR app (e.g. Vercel-only
+    // deployments), so /og has nothing to proxy to. Serve the thumbnail
+    // instead of bubbling a 500 into every og:image meta tag. #248
+    return fallbackToThumbnail(request, photoId)
+  }
+
+  if (response.status >= 500) {
+    return fallbackToThumbnail(request, photoId)
+  }
 
   if (!response.ok) {
     return new Response(await response.text(), {

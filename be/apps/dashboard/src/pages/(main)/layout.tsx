@@ -3,6 +3,9 @@ import { Outlet } from 'react-router'
 
 import { Header } from '~/components/common/Header'
 
+Object.entries(import.meta.glob('./**/*.tsx', { eager: false })).forEach(([_, importer]) => {
+  importer()
+})
 export function Component() {
   return (
     <div className="flex h-screen flex-col">

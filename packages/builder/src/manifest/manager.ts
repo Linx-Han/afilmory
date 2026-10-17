@@ -2,24 +2,31 @@ import fs from 'node:fs/promises'
 import path, { basename } from 'node:path'
 
 import { workdir } from '@afilmory/builder/path.js'
+import type { AfilmoryManifest, CameraInfo, LensInfo, PhotoManifestItem } from '@afilmory/typing'
 
 import { logger } from '../logger/index.js'
-import type { AfilmoryManifest, CameraInfo, LensInfo } from '../types/manifest.js'
-import type { PhotoManifestItem } from '../types/photo.js'
 import type { S3ObjectLike } from '../types/s3.js'
 import { migrateManifestFileIfNeeded } from './migrate.js'
 import { CURRENT_MANIFEST_VERSION } from './version.js'
 
 const manifestPath = path.join(workdir, 'src/data/photos-manifest.json')
 
-export async function loadExistingManifest(): Promise<AfilmoryManifest> {
+export interface LoadExistingManifestOptions {
+  allowWrite?: boolean
+  allowMigrate?: boolean
+}
+
+export async function loadExistingManifest(options: LoadExistingManifestOptions = {}): Promise<AfilmoryManifest> {
+  const { allowWrite = true, allowMigrate = true } = options
   let manifest: AfilmoryManifest
   try {
     const manifestContent = await fs.readFile(manifestPath, 'utf-8')
     manifest = JSON.parse(manifestContent) as AfilmoryManifest
   } catch {
     logger.fs.error('🔍 未找到 manifest 文件/解析失败，创建新的 manifest 文件...')
-    await saveManifest([])
+    if (allowWrite) {
+      await saveManifest([])
+    }
     return {
       version: CURRENT_MANIFEST_VERSION,
       data: [],
@@ -28,7 +35,7 @@ export async function loadExistingManifest(): Promise<AfilmoryManifest> {
     }
   }
 
-  if (manifest.version !== CURRENT_MANIFEST_VERSION) {
+  if (allowMigrate && manifest.version !== CURRENT_MANIFEST_VERSION) {
     const migrated = await migrateManifestFileIfNeeded(manifest)
     if (migrated) return migrated
   }

@@ -536,7 +536,7 @@ export class B2StorageProvider implements StorageProvider {
         const ext = path.extname(file.key).toLowerCase()
         if (SUPPORTED_FORMATS.has(ext)) {
           imageFile = file
-        } else if (ext === '.mov') {
+        } else if (ext === '.mov' || ext === '.mp4') {
           videoFile = file
         }
       }
@@ -560,6 +560,19 @@ export class B2StorageProvider implements StorageProvider {
       fileId: file.fileId,
       fileName: remoteKey,
     })
+  }
+
+  async deleteFolder(prefix: string): Promise<void> {
+    const normalizedPrefix = sanitizePath(prefix)
+    const targetPrefix = normalizedPrefix ? `${normalizedPrefix}/` : ''
+    const allFiles = await this.listAllFiles()
+    const keysToDelete = allFiles
+      .map((file) => file.key)
+      .filter((key): key is string => Boolean(key) && (!targetPrefix || key.startsWith(targetPrefix)))
+
+    for (const key of keysToDelete) {
+      await this.deleteFile(key)
+    }
   }
 
   async uploadFile(key: string, data: Buffer, options?: StorageUploadOptions): Promise<StorageObject> {

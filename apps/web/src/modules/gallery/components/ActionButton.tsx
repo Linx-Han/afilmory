@@ -26,15 +26,16 @@ export const ActionButton = ({
     <Button
       variant="ghost"
       size="sm"
-      className="relative h-10 w-10 rounded-full border-0 bg-gray-100 transition-all duration-200 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+      className="relative h-10 w-10 rounded-full border-0 bg-white/10 text-white/60 transition-colors duration-200 hover:bg-white/20 hover:text-white"
       title={title}
+      aria-label={title}
       onClick={onClick}
       ref={ref}
       {...props}
     >
-      <i className={clsxm(icon, 'text-base text-gray-600 dark:text-gray-300')} />
+      <i className={clsxm(icon, 'text-lg')} aria-hidden="true" />
       {badge && (
-        <span className="bg-accent absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-medium text-white shadow-sm">
+        <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-medium text-white shadow-sm">
           {badge}
         </span>
       )}
@@ -101,7 +102,7 @@ export const MobileActionButton = ({
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" />
           <Drawer.Content className="fixed right-0 bottom-0 left-0 z-50 flex flex-col rounded-t-2xl border-t border-zinc-200 bg-white/80 p-4 backdrop-blur-xl dark:border-zinc-800 dark:bg-black/80">
-            <div className="mx-auto mb-4 h-1.5 w-12 flex-shrink-0 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+            <div className="mx-auto mb-4 h-1.5 w-12 shrink-0 rounded-full bg-zinc-300 dark:bg-zinc-700" />
             {children}
           </Drawer.Content>
         </Drawer.Portal>

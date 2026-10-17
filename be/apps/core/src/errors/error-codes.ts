@@ -26,7 +26,9 @@ export enum ErrorCode {
   PHOTO_MANIFEST_GENERATION_FAILED = 31,
 
   // Billing / Subscription
-  BILLING_QUOTA_EXCEEDED = 40,
+  BILLING_PLAN_QUOTA_EXCEEDED = 40,
+  BILLING_STORAGE_QUOTA_EXCEEDED = 41,
+  BILLING_TRANSACTION_NOT_ATTRIBUTABLE = 42,
 }
 
 export interface ErrorDescriptor {
@@ -108,8 +110,17 @@ export const ERROR_CODE_DESCRIPTORS: Record<ErrorCode, ErrorDescriptor> = {
     httpStatus: 500,
     message: 'Photo manifest generation failed',
   },
-  [ErrorCode.BILLING_QUOTA_EXCEEDED]: {
+  [ErrorCode.BILLING_PLAN_QUOTA_EXCEEDED]: {
     httpStatus: 402,
     message: 'Usage quota exceeded',
+  },
+  [ErrorCode.BILLING_STORAGE_QUOTA_EXCEEDED]: {
+    httpStatus: 402,
+    message: 'Storage quota exceeded',
+  },
+  // Terminal for the submitting device: retrying replays the same rejection forever.
+  [ErrorCode.BILLING_TRANSACTION_NOT_ATTRIBUTABLE]: {
+    httpStatus: 409,
+    message: 'This purchase cannot be applied to this workspace',
   },
 }

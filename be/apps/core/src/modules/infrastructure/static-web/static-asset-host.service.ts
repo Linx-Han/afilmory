@@ -1,13 +1,25 @@
-import { createLogger } from '@afilmory/framework'
-import { SystemSettingService } from 'core/modules/configuration/system-setting/system-setting.service'
+import { SystemSettingService } from '@core/modules/configuration/system-setting/system-setting.service'
+import { createLogger } from '@tsuki-hono/common'
+import { EventEmitterService } from '@tsuki-hono/event-emitter'
 import { injectable } from 'tsyringe'
+
+const IPV4_HOST_PATTERN = /^\d{1,3}(?:\.\d{1,3}){3}$/
 
 @injectable()
 export class StaticAssetHostService {
   private readonly logger = createLogger('StaticAssetHostService')
   private readonly cache = new Map<string, string | null>()
 
-  constructor(private readonly systemSettingService: SystemSettingService) {}
+  constructor(
+    private readonly systemSettingService: SystemSettingService,
+    private readonly eventService: EventEmitterService,
+  ) {
+    eventService.on('system.setting.updated', ({ key }) => {
+      if (key === 'system.domain.base') {
+        this.cache.clear()
+      }
+    })
+  }
 
   async getStaticAssetHost(requestHost?: string | null): Promise<string | null> {
     const cacheKey = this.buildCacheKey(requestHost)
@@ -29,6 +41,11 @@ export class StaticAssetHostService {
 
   private async resolveStaticAssetHost(requestHost?: string | null): Promise<string | null> {
     try {
+      const requestHostname = this.extractHostname(requestHost)
+      if (requestHostname && this.isLocalDomain(requestHostname)) {
+        return null
+      }
+
       const settings = await this.systemSettingService.getSettings()
       const baseDomain = settings.baseDomain?.trim().toLowerCase()
       if (!baseDomain) {
@@ -41,7 +58,8 @@ export class StaticAssetHostService {
       }
 
       return `//static.${baseDomain}`
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.warn('Failed to load system settings for static asset host', error)
       return null
     }
@@ -56,7 +74,7 @@ export class StaticAssetHostService {
       return true
     }
 
-    if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(baseDomain)) {
+    if (IPV4_HOST_PATTERN.test(baseDomain)) {
       return true
     }
 
@@ -87,5 +105,19 @@ export class StaticAssetHostService {
     }
 
     return segments.at(-1) ?? null
+  }
+
+  private extractHostname(requestHost?: string | null): string | null {
+    const host = requestHost?.trim()
+    if (!host) {
+      return null
+    }
+
+    try {
+      return new URL(`http://${host}`).hostname.toLowerCase()
+    }
+    catch {
+      return null
+    }
   }
 }

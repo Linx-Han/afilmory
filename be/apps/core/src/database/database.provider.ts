@@ -1,9 +1,9 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 
 import { dbSchema } from '@afilmory/db'
-import { createLogger } from '@afilmory/framework'
-import { BizException, ErrorCode } from 'core/errors'
-import { getTenantContext } from 'core/modules/platform/tenant/tenant.context'
+import { BizException, ErrorCode } from '@core/errors'
+import { getTenantContext } from '@core/modules/platform/tenant/tenant.context'
+import { createLogger } from '@tsuki-hono/common'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { injectable } from 'tsyringe'
@@ -121,10 +121,7 @@ export class DrizzleProvider {
 
 @injectable()
 export class DbAccessor {
-  constructor(
-    private readonly provider: DrizzleProvider,
-    private readonly poolProvider: PgPoolProvider,
-  ) {}
+  constructor(private readonly provider: DrizzleProvider) {}
 
   get(): DrizzleDb {
     const store = getOptionalDbContext()

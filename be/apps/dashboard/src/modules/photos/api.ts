@@ -42,26 +42,72 @@ function parseRawPayload(raw: string | null | undefined): unknown | null {
   }
 }
 
-function extractMessageFromRaw(raw: string | null | undefined): string | null {
-  const payload = parseRawPayload(raw)
-  if (payload == null) {
-    return null
-  }
-  return normalizeServerMessage(payload)
+type ServerErrorInfo = {
+  message: string | null
+  code: number | null
+  raw: unknown
 }
 
-async function readResponseErrorMessage(response: Response): Promise<string | null> {
+const extractErrorInfoFromPayload = (payload: unknown): ServerErrorInfo => {
+  const message = normalizeServerMessage(payload)
+  const codeValue = typeof payload === 'object' && payload ? (payload as { code?: unknown }).code : null
+  const code =
+    typeof codeValue === 'number' && Number.isFinite(codeValue)
+      ? codeValue
+      : typeof codeValue === 'string'
+        ? Number.parseInt(codeValue, 10)
+        : null
+  return {
+    message,
+    code: Number.isFinite(code ?? Number.NaN) ? (code as number) : null,
+    raw: payload,
+  }
+}
+
+function extractErrorInfoFromRaw(raw: string | null | undefined): ServerErrorInfo {
+  const payload = parseRawPayload(raw)
+  return extractErrorInfoFromPayload(payload ?? raw ?? null)
+}
+
+async function readResponseErrorInfo(response: Response): Promise<ServerErrorInfo> {
   try {
     const text = await response.text()
-    return extractMessageFromRaw(text)
+    return extractErrorInfoFromRaw(text)
   } catch {
-    return null
+    return { message: null, code: null, raw: null }
   }
 }
 
-function extractMessageFromXhr(xhr: XMLHttpRequest): string | null {
+function extractErrorInfoFromXhr(xhr: XMLHttpRequest): ServerErrorInfo {
   const raw = typeof xhr.response === 'string' && xhr.response.length > 0 ? xhr.response : (xhr.responseText ?? '')
-  return extractMessageFromRaw(raw)
+  return extractErrorInfoFromRaw(raw)
+}
+
+const createApiError = (
+  info: ServerErrorInfo,
+  fallback: string,
+  status?: number,
+): Error & {
+  statusCode?: number
+  code?: number
+  data?: unknown
+  response?: { status?: number; _data?: unknown }
+} => {
+  const error = new Error(info.message ?? fallback) as Error & {
+    statusCode?: number
+    code?: number
+    data?: unknown
+    response?: { status?: number; _data?: unknown }
+  }
+  if (typeof status === 'number' && Number.isFinite(status)) {
+    error.statusCode = status
+    error.response = { status }
+  }
+  if (typeof info.code === 'number') {
+    error.code = info.code
+  }
+  error.data = info.raw
+  return error
 }
 
 type RunPhotoSyncOptions = {
@@ -111,8 +157,8 @@ export async function runPhotoSync(
 
   if (!response.ok || !response.body) {
     const fallback = `Sync request failed: ${response.status} ${response.statusText}`
-    const serverMessage = await readResponseErrorMessage(response)
-    throw new Error(serverMessage ?? fallback)
+    const errorInfo = await readResponseErrorInfo(response)
+    throw createApiError(errorInfo, fallback, response.status)
   }
 
   const reader = response.body.getReader()
@@ -120,6 +166,7 @@ export async function runPhotoSync(
   let buffer = ''
   let finalResult: PhotoSyncResult | null = null
   let lastErrorMessage: string | null = null
+  let lastErrorCode: number | null = null
 
   const stageEvent = (rawEvent: string) => {
     const lines = rawEvent.split(STABLE_NEWLINE)
@@ -167,6 +214,15 @@ export async function runPhotoSync(
 
       if (event.type === 'error') {
         lastErrorMessage = event.payload.message
+        const payloadCode = (event.payload as { code?: unknown }).code
+        if (typeof payloadCode === 'number' && Number.isFinite(payloadCode)) {
+          lastErrorCode = payloadCode
+        } else if (typeof payloadCode === 'string') {
+          const parsed = Number.parseInt(payloadCode, 10)
+          if (!Number.isNaN(parsed)) {
+            lastErrorCode = parsed
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to parse sync progress event', error)
@@ -200,7 +256,7 @@ export async function runPhotoSync(
   }
 
   if (lastErrorMessage) {
-    throw new Error(lastErrorMessage)
+    throw createApiError({ message: lastErrorMessage, code: lastErrorCode, raw: null }, lastErrorMessage)
   }
 
   if (!finalResult) {
@@ -413,7 +469,11 @@ export async function uploadPhotoAssets(
         const event = camelCaseKeys<PhotoSyncProgressEvent>(parsed)
         options?.onServerEvent?.(event)
         if (event.type === 'error') {
-          settle(() => {}, reject, new Error(event.payload.message || 'Server processing failed'))
+          const error = createApiError(
+            extractErrorInfoFromPayload(event.payload),
+            'Server processing failed',
+          )
+          settle(() => {}, reject, error)
           xhr.abort()
           return
         }
@@ -436,7 +496,15 @@ export async function uploadPhotoAssets(
     }
 
     xhr.onerror = () => {
-      settle(() => {}, reject, new Error('Network error during upload. Please try again later.'))
+      settle(
+        () => {},
+        reject,
+        createApiError(
+          { message: 'Network error during upload. Please try again later.', code: null, raw: null },
+          'Network error during upload. Please try again later.',
+          xhr.status,
+        ),
+      )
     }
 
     xhr.onabort = () => {
@@ -444,7 +512,15 @@ export async function uploadPhotoAssets(
     }
 
     xhr.ontimeout = () => {
-      settle(() => {}, reject, new Error('Upload timed out. Please try again later.'))
+      settle(
+        () => {},
+        reject,
+        createApiError(
+          { message: 'Upload timed out. Please try again later.', code: null, raw: null },
+          'Upload timed out. Please try again later.',
+          xhr.status,
+        ),
+      )
     }
 
     xhr.onload = () => {
@@ -456,8 +532,8 @@ export async function uploadPhotoAssets(
 
       const fallbackMessage =
         xhr.status >= 200 && xhr.status < 300 ? 'Upload response incomplete' : `Upload failed: ${xhr.status}`
-      const serverMessage = extractMessageFromXhr(xhr)
-      settle(() => {}, reject, new Error(serverMessage ?? fallbackMessage))
+      const errorInfo = extractErrorInfoFromXhr(xhr)
+      settle(() => {}, reject, createApiError(errorInfo, fallbackMessage, xhr.status || undefined))
     }
 
     xhr.send(formData)

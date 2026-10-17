@@ -3,6 +3,7 @@ import { cx, Spring } from '@afilmory/utils'
 import { m } from 'motion/react'
 import type { FC } from 'react'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type {
   TenantRegistrationFormState,
@@ -37,9 +38,13 @@ export const ReviewStep: FC<ReviewStepProps> = ({
   serverError,
   onFieldInteraction,
 }) => {
+  const { t } = useTranslation()
+
   const formatSiteValue = (value: SchemaFormValue | undefined) => {
     if (typeof value === 'boolean') {
-      return value ? 'Enabled' : 'Disabled'
+      return value
+        ? t('auth.registration.common.enabled', 'Enabled')
+        : t('auth.registration.common.disabled', 'Disabled')
     }
     if (value == null) {
       return '—'
@@ -65,32 +70,40 @@ export const ReviewStep: FC<ReviewStepProps> = ({
   return (
     <div className="space-y-8">
       <section className="space-y-3">
-        <h2 className="text-text text-lg font-semibold">Confirm workspace configuration</h2>
-        <p className="text-text-secondary text-sm">
-          Double-check the details below. You can go back to make adjustments before creating the workspace.
-        </p>
+        <h2 className="text-text text-lg font-semibold">{t('auth.registration.steps.review.title_confirm')}</h2>
+        <p className="text-text-secondary text-sm">{t('auth.registration.steps.review.description_confirm')}</p>
       </section>
       <dl className="bg-fill/40 grid gap-x-6 gap-y-4 rounded-2xl border border-white/5 p-6 md:grid-cols-2">
         <div>
-          <dt className="text-text-tertiary text-xs tracking-wide uppercase">Workspace name</dt>
+          <dt className="text-text-tertiary text-xs tracking-wide uppercase">
+            {t('auth.registration.steps.review.label_workspace_name')}
+          </dt>
           <dd className="text-text mt-1 text-sm font-medium">{values.tenantName || '—'}</dd>
         </div>
         <div>
-          <dt className="text-text-tertiary text-xs tracking-wide uppercase">Workspace slug</dt>
+          <dt className="text-text-tertiary text-xs tracking-wide uppercase">
+            {t('auth.registration.steps.review.label_workspace_slug')}
+          </dt>
           <dd className="text-text mt-1 text-sm font-medium">{values.tenantSlug || '—'}</dd>
         </div>
         <div>
-          <dt className="text-text-tertiary text-xs tracking-wide uppercase">Administrator name</dt>
+          <dt className="text-text-tertiary text-xs tracking-wide uppercase">
+            {t('auth.registration.steps.review.label_admin_name')}
+          </dt>
           <dd className="text-text mt-1 text-sm font-medium">{authUser?.name || authUser?.email || '—'}</dd>
         </div>
         <div>
-          <dt className="text-text-tertiary text-xs tracking-wide uppercase">Administrator email</dt>
+          <dt className="text-text-tertiary text-xs tracking-wide uppercase">
+            {t('auth.registration.steps.review.label_admin_email')}
+          </dt>
           <dd className="text-text mt-1 text-sm font-medium">{authUser?.email || '—'}</dd>
         </div>
       </dl>
 
       <section className="space-y-4">
-        <h3 className="text-text text-base font-semibold">Site details</h3>
+        <h3 className="text-text text-base font-semibold">
+          {t('auth.registration.steps.review.section_site_details')}
+        </h3>
         {siteSchemaLoading && <div className="bg-fill/40 h-32 animate-pulse rounded-2xl border border-white/5" />}
         {!siteSchemaLoading && siteSchemaError && (
           <div className="border-red/60 bg-red/10 text-red rounded-2xl border px-4 py-3 text-sm">{siteSchemaError}</div>
@@ -132,10 +145,8 @@ export const ReviewStep: FC<ReviewStepProps> = ({
       )}
 
       <section className="space-y-3">
-        <h3 className="text-text text-base font-semibold">Policies</h3>
-        <p className="text-text-tertiary text-sm">
-          Creating a workspace means you agree to comply with our usage guidelines and privacy practices.
-        </p>
+        <h3 className="text-text text-base font-semibold">{t('auth.registration.steps.review.section_policies')}</h3>
+        <p className="text-text-tertiary text-sm">{t('auth.registration.steps.review.policies_description')}</p>
         <div className="space-y-2">
           <form.Field name="termsAccepted">
             {(field) => {
@@ -153,13 +164,13 @@ export const ReviewStep: FC<ReviewStepProps> = ({
                       className="mt-0.5"
                     />
                     <span className="text-text-secondary">
-                      I agree to the{' '}
+                      {t('auth.registration.steps.review.terms_agree_pre')}{' '}
                       <a href="/terms" target="_blank" rel="noreferrer" className="text-accent hover:underline">
-                        Terms of Service
+                        {t('auth.registration.steps.review.terms_link')}
                       </a>{' '}
-                      and{' '}
+                      {t('auth.registration.steps.review.terms_and')}{' '}
                       <a href="/privacy" target="_blank" rel="noreferrer" className="text-accent hover:underline">
-                        Privacy Policy
+                        {t('auth.registration.steps.review.privacy_link')}
                       </a>
                       .
                     </span>

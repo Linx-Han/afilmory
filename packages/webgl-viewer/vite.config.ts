@@ -6,7 +6,7 @@ export default defineConfig({
     minify: true,
     lib: {
       entry: './src/index.ts',
-      name: 'WebGLImageViewer',
+      name: 'ImageViewer',
       fileName: () => `index.js`,
       formats: ['es'],
     },
@@ -17,7 +17,7 @@ export default defineConfig({
   plugins: [
     dts({
       include: ['src/**/*.ts', 'src/**/*.tsx'],
-      outDir: 'dist',
+      outDirs: ['dist'],
       tsconfigPath: 'tsconfig.json',
     }),
   ],

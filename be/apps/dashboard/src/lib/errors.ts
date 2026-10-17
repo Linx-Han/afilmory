@@ -72,3 +72,70 @@ export function getRequestErrorMessage(error: unknown, fallback?: string): strin
 
   return fallback ?? getI18n().t('errors.request.generic')
 }
+
+const parseNumberLike = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10)
+    return Number.isNaN(parsed) ? null : parsed
+  }
+  return null
+}
+
+export function getRequestStatusCode(error: unknown): number | null {
+  if (error instanceof FetchError) {
+    const status = error.statusCode ?? (error as FetchErrorWithPayload).response?.status
+    if (typeof status === 'number' && Number.isFinite(status)) {
+      return status
+    }
+  }
+
+  if (typeof error === 'object' && error) {
+    const candidate = (error as { statusCode?: unknown }).statusCode
+    const parsedCandidate = parseNumberLike(candidate)
+    if (parsedCandidate !== null) {
+      return parsedCandidate
+    }
+
+    const responseStatus = (error as { response?: { status?: unknown } }).response?.status
+    const parsedResponse = parseNumberLike(responseStatus)
+    if (parsedResponse !== null) {
+      return parsedResponse
+    }
+  }
+
+  return null
+}
+
+const extractPayloadCode = (payload: unknown): number | null => {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+  return parseNumberLike((payload as { code?: unknown }).code)
+}
+
+export function getRequestErrorCode(error: unknown): number | null {
+  if (!error || typeof error !== 'object') {
+    return null
+  }
+
+  const directCode = parseNumberLike((error as { code?: unknown }).code)
+  if (directCode !== null) {
+    return directCode
+  }
+
+  const dataCode = extractPayloadCode((error as { data?: unknown }).data)
+  if (dataCode !== null) {
+    return dataCode
+  }
+
+  const {response} = (error as { response?: { _data?: unknown; data?: unknown } })
+  const responseCode = extractPayloadCode(response?._data ?? response?.data)
+  if (responseCode !== null) {
+    return responseCode
+  }
+
+  return null
+}

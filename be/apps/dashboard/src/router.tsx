@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router'
 import { App } from './App'
 import { ErrorElement } from './components/common/ErrorElement'
 import { NotFound } from './components/common/NotFound'
+// @ts-ignore
 import { routes } from './generated-routes'
 
 export const router = createBrowserRouter(

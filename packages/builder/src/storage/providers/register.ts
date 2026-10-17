@@ -2,9 +2,11 @@ import type { StorageProviderFactory } from '../factory.js'
 import { StorageFactory } from '../factory.js'
 import type {
   B2Config,
+  COSConfig,
   EagleConfig,
   GitHubConfig,
   LocalConfig,
+  OSSConfig,
   S3Config,
   StorageProviderCategory,
 } from '../interfaces.js'
@@ -25,6 +27,16 @@ const BUILTIN_PROVIDER_REGISTRATIONS: BuiltinProviderRegistration[] = [
     name: 's3',
     category: 'remote',
     factory: (config) => new S3StorageProvider(config as S3Config),
+  },
+  {
+    name: 'oss',
+    category: 'remote',
+    factory: (config) => new S3StorageProvider(config as OSSConfig),
+  },
+  {
+    name: 'cos',
+    category: 'remote',
+    factory: (config) => new S3StorageProvider(config as COSConfig),
   },
   {
     name: 'b2',

@@ -1,5 +1,6 @@
+import type { PhotoManifestItem } from '@afilmory/typing'
+
 import { thumbnailExists } from '../image/thumbnail.js'
-import type { PhotoManifestItem } from '../types/photo.js'
 import type { PhotoProcessorOptions } from './processor.js'
 
 export interface CacheableData {
@@ -39,6 +40,17 @@ export async function shouldProcessPhoto(
     return {
       shouldProcess: true,
       reason: fileNeedsUpdate ? '文件已更新' : '强制更新清单',
+    }
+  }
+
+  const needsXmpBackfill =
+    (options.xmpKeywordsEnabled && !Array.isArray((existingItem as Partial<PhotoManifestItem>).keywords)) ||
+    (options.xmpRegionsEnabled && !Array.isArray((existingItem as Partial<PhotoManifestItem>).regions))
+
+  if (needsXmpBackfill) {
+    return {
+      shouldProcess: true,
+      reason: '补全 XMP 字段',
     }
   }
 

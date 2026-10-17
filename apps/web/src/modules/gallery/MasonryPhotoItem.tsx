@@ -1,7 +1,8 @@
 import { Thumbhash } from '@afilmory/ui'
+import { getViewerTransitionTriggerProps } from '@afilmory/viewer-motion'
 import clsx from 'clsx'
 import { m } from 'motion/react'
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { useContextPhotos, usePhotoViewer } from '~/hooks/usePhotoViewer'
@@ -13,10 +14,10 @@ import {
 } from '~/icons'
 import { isMobileDevice } from '~/lib/device-viewport'
 import { ImageLoaderManager } from '~/lib/image-loader-manager'
-import { getImageFormat } from '~/lib/image-utils'
+import { formatExifData } from '~/modules/metadata'
 import type { PhotoManifest } from '~/types/photo'
 
-export const MasonryPhotoItem = ({ data, width, index: _ }: { data: PhotoManifest; width: number; index: number }) => {
+export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; width: number }) => {
   const photos = useContextPhotos()
   const photoViewer = usePhotoViewer()
   const { t } = useTranslation()
@@ -55,49 +56,8 @@ export const MasonryPhotoItem = ({ data, width, index: _ }: { data: PhotoManifes
   // 计算基于宽度的高度
   const calculatedHeight = width / data.aspectRatio
 
-  // 格式化 EXIF 数据
-  const formatExifData = () => {
-    const { exif } = data
-
-    // 安全处理：如果 exif 不存在或为空，则返回空对象
-    if (!exif) {
-      return {
-        focalLength35mm: null,
-        iso: null,
-        shutterSpeed: null,
-        aperture: null,
-      }
-    }
-
-    // 等效焦距 (35mm)
-    const focalLength35mm = exif.FocalLengthIn35mmFormat
-      ? Number.parseInt(exif.FocalLengthIn35mmFormat)
-      : exif.FocalLength
-        ? Number.parseInt(exif.FocalLength)
-        : null
-
-    // ISO
-    const iso = exif.ISO
-
-    // 快门速度
-    const exposureTime = exif.ExposureTime
-    const shutterSpeed = exposureTime ? `${exposureTime}s` : null
-
-    // 光圈
-    const aperture = exif.FNumber ? `f/${exif.FNumber}` : null
-
-    return {
-      focalLength35mm,
-      iso,
-      shutterSpeed,
-      aperture,
-    }
-  }
-
-  const exifData = formatExifData()
-
-  // 使用通用的图片格式提取函数
-  const imageFormat = getImageFormat(data.originalUrl || data.s3Key || '')
+  // 使用共享的 EXIF 格式化函数
+  const exifData = useMemo(() => formatExifData(data.exif ?? null), [data.exif])
 
   // 检查是否有视频内容（Live Photo 或 Motion Photo）
   const hasVideo = data.video !== undefined
@@ -215,7 +175,7 @@ export const MasonryPhotoItem = ({ data, width, index: _ }: { data: PhotoManifes
         width,
         height: calculatedHeight,
       }}
-      data-photo-id={data.id}
+      {...getViewerTransitionTriggerProps(data.id)}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -228,7 +188,8 @@ export const MasonryPhotoItem = ({ data, width, index: _ }: { data: PhotoManifes
           ref={imageRef}
           src={data.thumbnailUrl}
           alt={data.title}
-          className={clsx('absolute inset-0 h-full w-full object-cover duration-300 group-hover:scale-105')}
+          loading="lazy"
+          className={'absolute inset-0 h-full w-full object-cover duration-300 group-hover:scale-105'}
           onLoad={handleImageLoad}
           onError={handleImageError}
         />
@@ -301,7 +262,7 @@ export const MasonryPhotoItem = ({ data, width, index: _ }: { data: PhotoManifes
           {/* 内容层 - 独立的层以支持 backdrop-filter */}
           <div className="absolute inset-x-0 bottom-0 p-4 pb-0 text-white">
             {/* 基本信息和标签 section */}
-            <div className="mb-3 [&_*]:duration-300">
+            <div className="mb-3 **:duration-300">
               <h3 className="mb-2 truncate text-sm font-medium opacity-0 group-hover:opacity-100">{data.title}</h3>
               {data.description && (
                 <p className="mb-2 line-clamp-2 text-sm text-white/80 opacity-0 group-hover:opacity-100">
@@ -311,7 +272,7 @@ export const MasonryPhotoItem = ({ data, width, index: _ }: { data: PhotoManifes
 
               {/* 基本信息 */}
               <div className="mb-2 flex flex-wrap gap-2 text-xs text-white/80 opacity-0 group-hover:opacity-100">
-                <span>{imageFormat}</span>
+                <span>{data.format}</span>
                 <span>•</span>
                 <span>
                   {data.width} × {data.height}
@@ -336,7 +297,7 @@ export const MasonryPhotoItem = ({ data, width, index: _ }: { data: PhotoManifes
             </div>
 
             {/* EXIF 信息网格 */}
-            {calculatedHeight >= 200 && (
+            {calculatedHeight >= 200 && exifData && (
               <div className="grid grid-cols-2 gap-2 pb-4 text-xs">
                 {exifData.focalLength35mm && (
                   <div className="flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1 opacity-0 backdrop-blur-md transition-opacity duration-300 group-hover:opacity-100">
@@ -372,4 +333,4 @@ export const MasonryPhotoItem = ({ data, width, index: _ }: { data: PhotoManifes
       )}
     </m.div>
   )
-}
+})

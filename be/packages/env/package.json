@@ -2,17 +2,18 @@
   "name": "@afilmory/env",
   "type": "module",
   "version": "1.0.0",
+  "private": true,
   "exports": {
     ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
     }
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
-    "@t3-oss/env-core": "^0.13.8",
-    "dotenv": "17.2.3",
-    "zod": "^4.1.11"
+    "@t3-oss/env-core": "^0.13.11",
+    "dotenv": "18.0.7",
+    "zod": "^4.6.7"
   }
 }

@@ -1,11 +1,11 @@
+import type { AfilmoryManifest, CameraInfo, LensInfo, PhotoManifestItem, ProcessPhotoResult  } from '@afilmory/typing'
+
 import type { AfilmoryBuilder, BuilderOptions, BuilderResult } from '../builder/builder.js'
 import type { Logger } from '../logger/index.js'
 import type { PhotoProcessingContext } from '../photo/image-pipeline.js'
 import type { PhotoProcessorOptions } from '../photo/processor.js'
 import type { StorageObject } from '../storage/interfaces.js'
 import type { BuilderConfig } from '../types/config.js'
-import type { AfilmoryManifest, CameraInfo, LensInfo } from '../types/manifest.js'
-import type { PhotoManifestItem, ProcessPhotoResult } from '../types/photo.js'
 
 export type BuilderPluginESMImporter = () => Promise<{
   default: (() => BuilderPlugin | Promise<BuilderPlugin>) | BuilderPlugin

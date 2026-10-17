@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer'
+
 import type {
   BuilderConfig,
   BuilderOptions,
@@ -20,7 +22,7 @@ import {
   createStorageKeyNormalizer,
   runWithPhotoExecutionContext,
 } from '@afilmory/builder/photo/index.js'
-import { logger as coreLogger } from 'core/helpers/logger.helper'
+import { logger as coreLogger } from '@core/helpers/logger.helper'
 import { injectable } from 'tsyringe'
 
 import { createBuilderLoggerAdapter } from './photo-builder-logger.adapter'
@@ -29,6 +31,8 @@ const DEFAULT_PROCESSOR_OPTIONS: PhotoProcessorOptions = {
   isForceMode: false,
   isForceManifest: false,
   isForceThumbnails: false,
+  xmpKeywordsEnabled: false,
+  xmpRegionsEnabled: false,
 }
 
 export type ProcessPhotoOptions = {
@@ -112,7 +116,7 @@ export class PhotoBuilderService {
     builder: AfilmoryBuilder,
     processorOptions: PhotoProcessorOptions,
     builderConfig?: BuilderConfig,
-  ): { runState: ReturnType<AfilmoryBuilder['createPluginRunState']>; builderOptions: BuilderOptions } {
+  ): { runState: ReturnType<AfilmoryBuilder['createPluginRunState']>, builderOptions: BuilderOptions } {
     const config = builderConfig ?? builder.getConfig()
 
     const builderOptions: BuilderOptions = {

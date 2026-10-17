@@ -1,12 +1,12 @@
 import { Button, Modal } from '@afilmory/ui'
 import { clsxm } from '@afilmory/utils'
-import { DynamicIcon } from 'lucide-react/dynamic'
+import { CheckSquare, Square, Tags, Trash2, X } from 'lucide-react'
 import type { ChangeEventHandler } from 'react'
 import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/shallow'
 
-import { usePhotoLibraryStore } from './PhotoLibraryProvider'
+import { usePhotoLibraryStore } from './photo-library'
 import { PhotoTagEditorModal } from './PhotoTagEditorModal'
 import { PhotoUploadConfirmModal } from './PhotoUploadConfirmModal'
 
@@ -37,7 +37,7 @@ export function PhotoLibraryActionBar() {
     selectedIds,
     assets,
   } = usePhotoLibraryStore(
-    useShallow((state) => ({
+    useShallow(state => ({
       selectionCount: state.selectedIds.length,
       totalCount: state.libraryTotalCount,
       isUploading: state.isUploading,
@@ -65,7 +65,7 @@ export function PhotoLibraryActionBar() {
       return emptyArray
     }
     const idSet = new Set(selectedIds)
-    return assets.filter((asset) => idSet.has(asset.id))
+    return assets.filter(asset => idSet.has(asset.id))
   }, [assets, selectedIds])
 
   const handleUploadClick = () => {
@@ -74,7 +74,9 @@ export function PhotoLibraryActionBar() {
 
   const handleFileChange: ChangeEventHandler<HTMLInputElement> = (event) => {
     const { files } = event.currentTarget
-    if (!files || files.length === 0) return
+    if (!files || files.length === 0) {
+      return
+    }
 
     const selectedFiles = Array.from(files)
 
@@ -152,7 +154,7 @@ export function PhotoLibraryActionBar() {
             onClick={handleEditSelectedTags}
             className="flex items-center gap-1 text-text-secondary hover:text-text"
           >
-            <DynamicIcon name="tags" className="h-3.5 w-3.5" />
+            <Tags className="h-3.5 w-3.5" />
             {t(photoLibraryActionKeys.editTags)}
           </Button>
           <Button
@@ -163,11 +165,11 @@ export function PhotoLibraryActionBar() {
             onClick={deleteSelected}
             className="flex items-center gap-1 text-rose-400 hover:text-rose-300"
           >
-            <DynamicIcon name="trash-2" className="h-3.5 w-3.5" />
+            <Trash2 className="h-3.5 w-3.5" />
             {t(photoLibraryActionKeys.delete)}
           </Button>
           <Button type="button" className="gap-1" variant="ghost" size="sm" onClick={clearSelection}>
-            <DynamicIcon name="x" className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" />
             {t(photoLibraryActionKeys.clear)}
           </Button>
         </div>
@@ -179,7 +181,7 @@ export function PhotoLibraryActionBar() {
           onClick={selectAll}
           className="flex items-center gap-1 text-text-secondary hover:text-text"
         >
-          <DynamicIcon name={canSelectAll ? 'square' : 'check-square'} className="size-4" />
+          {canSelectAll ? <Square className="size-4" /> : <CheckSquare className="size-4" />}
           {selectAllLabel}
         </Button>
       </div>

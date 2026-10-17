@@ -1,12 +1,13 @@
+import { Buffer } from 'node:buffer'
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
 
 import { settings } from '@afilmory/db'
 import { env } from '@afilmory/env'
-import { EventEmitterService } from '@afilmory/framework'
-import { DbAccessor } from 'core/database/database.provider'
-import { BizException, ErrorCode } from 'core/errors'
-import { getTenantContext } from 'core/modules/platform/tenant/tenant.context'
-import { TenantService } from 'core/modules/platform/tenant/tenant.service'
+import { DbAccessor } from '@core/database/database.provider'
+import { BizException, ErrorCode } from '@core/errors'
+import { getTenantContext } from '@core/modules/platform/tenant/tenant.context'
+import { TenantService } from '@core/modules/platform/tenant/tenant.service'
+import { EventEmitterService } from '@tsuki-hono/event-emitter'
 import { and, eq, inArray } from 'drizzle-orm'
 import { injectable } from 'tsyringe'
 
@@ -31,14 +32,14 @@ export type SetSettingOptions = {
   description?: string | null
 } & SettingOption
 
-declare module '@afilmory/framework' {
+declare module '@tsuki-hono/event-emitter' {
   interface Events {
-    'setting.updated': { tenantId: string; key: string; value: string }
-    'setting.deleted': { tenantId: string; key: string }
+    'setting.updated': { tenantId: string, key: string, value: string }
+    'setting.deleted': { tenantId: string, key: string }
   }
 }
 export type SettingEntryInput = {
-  [K in SettingKeyType]: { key: K; value: SettingValueMap[K]; options?: SetSettingOptions }
+  [K in SettingKeyType]: { key: K, value: SettingValueMap[K], options?: SetSettingOptions }
 }[SettingKeyType]
 
 function isSettingKey(key: string): key is SettingKeyType {
@@ -91,7 +92,7 @@ export class SettingService {
       .from(settings)
       .where(and(eq(settings.tenantId, tenantId), inArray(settings.key, uniqueKeys)))
 
-    const recordMap = new Map(records.map((record) => [record.key, record]))
+    const recordMap = new Map(records.map(record => [record.key, record]))
 
     return uniqueKeys.reduce<Record<string, string | null>>((acc, key) => {
       const record = recordMap.get(key)
@@ -129,17 +130,14 @@ export class SettingService {
 
     // If activeId exists and matches, return it
     if (activeId) {
-      const found = providers.find((provider) => provider.id === activeId) ?? null
-      if (found) return found
+      const found = providers.find(provider => provider.id === activeId) ?? null
+      if (found)
+        return found
     }
 
-    // Fallback: if there is exactly one provider, automatically set it active and persist the setting
+    // Fallback: if there is exactly one provider, treat it as active without mutating settings.
     if (providers.length === 1) {
-      const only = providers[0]
-      // Persist synchronously; ignore schema sensitivity (it's non-sensitive)
-      const setOptions = options ? { ...options, isSensitive: false } : { isSensitive: false }
-      await this.set('builder.storage.activeProvider', only.id, setOptions)
-      return only
+      return providers[0]
     }
 
     return null
@@ -219,8 +217,8 @@ export class SettingService {
     }
   }
 
-  async getUiSchema(): Promise<SettingUiSchemaResponse> {
-    const rawValues = await this.getMany(SETTING_UI_SCHEMA_KEYS, {})
+  async getUiSchema(options?: SettingOption): Promise<SettingUiSchemaResponse> {
+    const rawValues = await this.getMany(SETTING_UI_SCHEMA_KEYS, options)
     const typedValues: SettingUiSchemaResponse['values'] = {}
 
     for (const key of SETTING_UI_SCHEMA_KEYS) {

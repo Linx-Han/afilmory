@@ -1,7 +1,8 @@
+import type { PhotoManifestItem, ProcessPhotoResult } from '@afilmory/typing'
+
 import type { AfilmoryBuilder, BuilderOptions } from '../builder/builder.js'
 import { logger } from '../logger/index.js'
 import type { PluginRunState } from '../plugins/manager.js'
-import type { PhotoManifestItem, ProcessPhotoResult } from '../types/photo.js'
 import type { S3ObjectLike } from '../types/s3.js'
 import { createStorageKeyNormalizer, runWithPhotoExecutionContext } from './execution-context.js'
 import type { PhotoProcessingContext } from './image-pipeline.js'
@@ -12,6 +13,9 @@ export interface PhotoProcessorOptions {
   isForceMode: boolean
   isForceManifest: boolean
   isForceThumbnails: boolean
+  xmpKeywordsEnabled: boolean
+  xmpRegionsEnabled: boolean
+  dryRun?: boolean
 }
 
 // 处理单张照片

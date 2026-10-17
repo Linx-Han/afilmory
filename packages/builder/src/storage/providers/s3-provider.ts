@@ -6,7 +6,13 @@ import { backoffDelay, sleep } from '../../../../utils/src/backoff.js'
 import { Semaphore } from '../../../../utils/src/semaphore.js'
 import { SUPPORTED_FORMATS } from '../../constants/index.js'
 import { logger } from '../../logger/index.js'
-import type { ProgressCallback, S3Config, StorageObject, StorageProvider, StorageUploadOptions } from '../interfaces'
+import type {
+  ProgressCallback,
+  S3CompatibleConfig,
+  StorageObject,
+  StorageProvider,
+  StorageUploadOptions,
+} from '../interfaces'
 import { S3ProviderClient } from './s3-client.js'
 import { sanitizeS3Etag } from './s3-utils.js'
 
@@ -109,11 +115,11 @@ function formatS3ErrorBody(body?: string | null): string {
 }
 
 export class S3StorageProvider implements StorageProvider {
-  private config: S3Config
+  private config: S3CompatibleConfig
   private client: S3ProviderClient
   private limiter: Semaphore
 
-  constructor(config: S3Config) {
+  constructor(config: S3CompatibleConfig) {
     this.config = config
     this.client = new S3ProviderClient(config)
     this.limiter = new Semaphore(this.config.downloadConcurrency ?? 16)
@@ -245,36 +251,7 @@ export class S3StorageProvider implements StorageProvider {
       const customDomain = this.config.customDomain.replace(/\/$/, '') // 移除末尾的斜杠
       return `${customDomain}/${key}`
     }
-
-    // 如果使用自定义端点，构建相应的 URL
-    const { endpoint } = this.config
-
-    const region = this.config.region ?? 'us-east-1'
-
-    if (!endpoint) {
-      // 默认 AWS S3 端点
-      return `https://${this.config.bucket}.s3.${region}.amazonaws.com/${key}`
-    }
-
-    // 检查是否是标准 AWS S3 端点
-    if (endpoint.includes('amazonaws.com')) {
-      return `https://${this.config.bucket}.s3.${region}.amazonaws.com/${key}`
-    }
-
-    const baseUrl = endpoint.replace(/\/$/, '') // 移除末尾的斜杠
-
-    if (endpoint.includes('aliyuncs.com')) {
-      const protocolEndIndex = baseUrl.indexOf('//')
-      if (protocolEndIndex === -1) {
-        throw new Error('Invalid base URL format')
-      }
-      // 将 bucket 插入到 'https://` 之后，region 之前
-      const prefix = baseUrl.slice(0, protocolEndIndex + 2) // 包括 'https://'
-      const suffix = baseUrl.slice(protocolEndIndex + 2) // 剩余部分
-      return `${prefix}${this.config.bucket}.${suffix}/${key}`
-    }
-    // 对于自定义端点（如 MinIO 等）
-    return `${baseUrl}/${this.config.bucket}/${key}`
+    return this.client.buildObjectUrl(key)
   }
 
   detectLivePhotos(allObjects: StorageObject[]): Map<string, StorageObject> {
@@ -310,8 +287,8 @@ export class S3StorageProvider implements StorageProvider {
         if (SUPPORTED_FORMATS.has(ext)) {
           imageFile = file
         }
-        // 检查是否为 .mov 视频文件
-        else if (ext === '.mov') {
+        // 检查是否为 .mov 或 .mp4 视频文件
+        else if (ext === '.mov' || ext === '.mp4') {
           videoFile = file
         }
       }
@@ -325,30 +302,71 @@ export class S3StorageProvider implements StorageProvider {
     return livePhotoMap
   }
 
-  private async listObjects(): Promise<StorageObject[]> {
+  private async listObjects(prefix?: string): Promise<StorageObject[]> {
+    const maxTotal = this.config.maxFileLimit
+    const shouldPaginate = maxTotal === undefined || maxTotal > 1000
+    const all: StorageObject[] = []
+    let continuationToken: string | null = null
+
+    while (true) {
+      const { objects, nextContinuationToken, isTruncated } = await this.listPagedObjects(prefix, continuationToken)
+      all.push(...objects)
+
+      if (maxTotal && all.length >= maxTotal) {
+        break
+      }
+
+      if (!shouldPaginate || !isTruncated || !nextContinuationToken) {
+        break
+      }
+
+      continuationToken = nextContinuationToken
+    }
+
+    return maxTotal ? all.slice(0, maxTotal) : all
+  }
+
+  private async listPagedObjects(
+    prefix?: string,
+    continuationToken?: string | null,
+  ): Promise<{ objects: StorageObject[]; nextContinuationToken: string | null; isTruncated: boolean }> {
+    const maxKeysPerRequest = this.config.maxFileLimit ? Math.min(this.config.maxFileLimit, 1000) : 1000
     const response = await this.client.listObjects({
-      prefix: this.config.prefix,
-      maxKeys: this.config.maxFileLimit,
+      prefix: prefix ?? this.config.prefix,
+      maxKeys: maxKeysPerRequest,
+      continuationToken: continuationToken ?? undefined,
     })
     const text = await response.text()
     if (!response.ok) {
       throw new Error(`列出 S3 对象失败 (status ${response.status}): ${formatS3ErrorBody(text)}`)
     }
     const parsed = xmlParser.parse(text)
-    const contents = parsed?.ListBucketResult?.Contents ?? []
+    const result = parsed?.ListBucketResult ?? {}
+    const contents = result?.Contents ?? []
     const items = Array.isArray(contents) ? contents : contents ? [contents] : []
+    const nextContinuationToken =
+      typeof result?.NextContinuationToken === 'string' && result.NextContinuationToken.trim().length > 0
+        ? result.NextContinuationToken
+        : null
+    const isTruncatedRaw = result?.IsTruncated
+    const isTruncated =
+      typeof isTruncatedRaw === 'string' ? isTruncatedRaw.toLowerCase() === 'true' : Boolean(isTruncatedRaw)
 
-    return items
-      .map((item) => {
-        const key = item?.Key ?? ''
-        return {
-          key,
-          size: item?.Size !== undefined ? Number(item.Size) : undefined,
-          lastModified: item?.LastModified ? new Date(item.LastModified) : undefined,
-          etag: sanitizeS3Etag(typeof item?.ETag === 'string' ? item.ETag : undefined),
-        } satisfies StorageObject
-      })
-      .filter((item) => Boolean(item.key))
+    return {
+      objects: items
+        .map((item) => {
+          const key = item?.Key ?? ''
+          return {
+            key,
+            size: item?.Size !== undefined ? Number(item.Size) : undefined,
+            lastModified: item?.LastModified ? new Date(item.LastModified) : undefined,
+            etag: sanitizeS3Etag(typeof item?.ETag === 'string' ? item.ETag : undefined),
+          } satisfies StorageObject
+        })
+        .filter((item) => Boolean(item.key)),
+      nextContinuationToken,
+      isTruncated,
+    }
   }
 
   async deleteFile(key: string): Promise<void> {
@@ -357,6 +375,27 @@ export class S3StorageProvider implements StorageProvider {
     if (!response.ok) {
       const text = await response.text().catch(() => '')
       throw new Error(`删除 S3 对象失败：${key} (status ${response.status}) ${formatS3ErrorBody(text)}`)
+    }
+  }
+
+  async deleteFolder(prefix: string): Promise<void> {
+    const normalizedPrefix = this.normalizePrefix(prefix)
+    const basePrefix = normalizedPrefix || this.config.prefix || ''
+    const listPrefix = basePrefix || undefined
+    const targetPrefix = basePrefix && !basePrefix.endsWith('/') ? `${basePrefix}/` : basePrefix
+
+    const objects = await this.listObjects(listPrefix)
+
+    const keysToDelete = objects
+      .map((obj) => obj.key)
+      .filter((key): key is string => {
+        if (!key) return false
+        if (!targetPrefix) return true
+        return key.startsWith(targetPrefix)
+      })
+
+    for (const key of keysToDelete) {
+      await this.deleteFile(key)
     }
   }
 
@@ -403,5 +442,9 @@ export class S3StorageProvider implements StorageProvider {
       lastModified: metadata.lastModified,
       etag: sanitizeS3Etag(metadata.etag),
     }
+  }
+
+  private normalizePrefix(prefix: string): string {
+    return prefix.replaceAll('\\', '/').replaceAll(/^\/+|\/+$/g, '')
   }
 }

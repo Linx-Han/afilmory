@@ -5,10 +5,11 @@ import type { ManagedStorageOverview } from './types'
 
 export const MANAGED_STORAGE_PLAN_QUERY_KEY = ['billing', 'storage-plan'] as const
 
-export function useManagedStoragePlansQuery() {
+export function useManagedStoragePlansQuery(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: MANAGED_STORAGE_PLAN_QUERY_KEY,
     queryFn: getManagedStorageOverview,
+    enabled: options?.enabled ?? true,
   })
 }
 

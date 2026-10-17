@@ -3,7 +3,8 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import type { LocationInfo, PickedExif } from '../types/photo.js'
+import type { LocationInfo, PickedExif } from '@afilmory/typing'
+
 import { getGlobalLoggers } from './logger-adapter.js'
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))

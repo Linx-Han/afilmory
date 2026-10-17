@@ -75,6 +75,8 @@ export const storageProvidersI18nKeys = {
   },
   types: {
     s3: 'storage.providers.types.s3',
+    oss: 'storage.providers.types.oss',
+    cos: 'storage.providers.types.cos',
     github: 'storage.providers.types.github',
     b2: 'storage.providers.types.b2',
     local: 'storage.providers.types.local',
@@ -148,6 +150,8 @@ export const storageProvidersI18nKeys = {
   }
   types: {
     s3: I18nKeys
+    oss: I18nKeys
+    cos: I18nKeys
     github: I18nKeys
     b2: I18nKeys
     local: I18nKeys

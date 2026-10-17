@@ -1,26 +1,40 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "allowJs": false,
-    "skipLibCheck": true,
-    "esModuleInterop": false,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
+    "ignoreDeprecations": "6.0",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "paths": {
+      "@afilmory/builder/*": [
+        "./src/*"
+      ],
+      "@pkg": [
+        "./package.json"
+      ],
+      "@env": [
+        "../../env.ts"
+      ]
+    },
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "skipDefaultLibCheck": true,
+    "allowJs": false,
+    "strict": true,
     "noImplicitAny": false,
     "noEmit": true,
-    "jsx": "preserve",
-    "paths": {
-      "@afilmory/builder/*": ["./src/*"],
-      "@pkg": ["./package.json"],
-      "@env": ["../../env.ts"]
-    }
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "skipDefaultLibCheck": true,
+    "skipLibCheck": true
   },
-  "include": ["./src/**/*", "./scripts/**/*"]
+  "include": [
+    "./src/**/*",
+    "./scripts/**/*"
+  ]
 }

@@ -2,8 +2,8 @@
   "name": "@afilmory/webgl-viewer",
   "type": "module",
   "version": "0.2.0",
-  "packageManager": "pnpm@10.18.1",
-  "description": "",
+  "packageManager": "pnpm@11.1.2",
+  "description": "Afilmory GPU Image Viewer",
   "author": "Innei",
   "license": "MIT",
   "exports": {
@@ -12,18 +12,12 @@
   "main": "./src/index.ts",
   "scripts": {
     "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
     "react": ">=19.0.0"
-  },
-  "devDependencies": {
-    "@types/react": "19.2.3",
-    "nbump": "2.1.8",
-    "react": "19.2.0",
-    "tsdown": "0.16.3",
-    "unplugin-dts": "1.0.0-beta.6",
-    "vite": "7.2.2"
   },
   "publishConfig": {
     "access": "public",
@@ -34,5 +28,18 @@
         "import": "./dist/index.js"
       }
     }
+  },
+  "dependencies": {
+    "fast-xml-parser": "5.11.2"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@webgpu/types": "^0.1.74",
+    "nbump": "2.1.8",
+    "react": "^19.3.0",
+    "tsdown": "0.23.1",
+    "unplugin-dts": "1.1.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
   }
 }

@@ -1,4 +1,9 @@
-import type { StorageConfig, StorageObject, StorageUploadOptions } from '@afilmory/builder/storage/interfaces.js'
+import type {
+  StorageConfig,
+  StorageObject,
+  StorageUploadOptions,
+  StorageUploadProgress,
+} from '@afilmory/builder/storage/interfaces.js'
 import { StorageManager } from '@afilmory/builder/storage/manager.js'
 
 type StagedUpload = {
@@ -6,6 +11,15 @@ type StagedUpload = {
   data: Buffer
   options?: StorageUploadOptions
   placeholder: StorageObject
+}
+
+export type TransactionalUploadProgressEvent = StorageUploadProgress & {
+  index: number
+  total: number
+}
+
+type FlushUploadsOptions = {
+  onProgress?: (event: TransactionalUploadProgressEvent) => Promise<void> | void
 }
 
 export class TransactionalStorageManager extends StorageManager {
@@ -52,7 +66,7 @@ export class TransactionalStorageManager extends StorageManager {
     return this.stageUpload(key, data, options)
   }
 
-  async flushUploads(): Promise<void> {
+  async flushUploads(options?: FlushUploadsOptions): Promise<void> {
     if (this.pendingUploads.length === 0) {
       return
     }
@@ -60,8 +74,37 @@ export class TransactionalStorageManager extends StorageManager {
     const uploads = this.pendingUploads
     this.pendingUploads = []
 
-    for (const entry of uploads) {
-      const uploaded = await super.uploadFile(entry.key, entry.data, entry.options)
+    for (let index = 0; index < uploads.length; index += 1) {
+      const entry = uploads[index]
+      const baseEvent = {
+        key: entry.key,
+        size: entry.data.byteLength,
+        index: index + 1,
+        total: uploads.length,
+      }
+
+      const forwardProgressHandler =
+        options?.onProgress || entry.options?.onProgress
+          ? async (progress: StorageUploadProgress) => {
+              if (entry.options?.onProgress) {
+                await entry.options.onProgress(progress)
+              }
+              if (options?.onProgress) {
+                await options.onProgress({
+                  ...progress,
+                  index: baseEvent.index,
+                  total: baseEvent.total,
+                  size: progress.size ?? baseEvent.size,
+                })
+              }
+            }
+          : undefined
+
+      const uploadOptions = forwardProgressHandler
+        ? { ...entry.options, onProgress: forwardProgressHandler }
+        : entry.options
+      const uploaded: StorageObject = await super.uploadFile(entry.key, entry.data, uploadOptions)
+
       this.persistedUploads.set(entry.key, uploaded)
 
       entry.placeholder.size = uploaded.size

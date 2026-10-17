@@ -1,3 +1,5 @@
+import type { LocationInfo, PhotoManifestItem, PickedExif } from '@afilmory/typing'
+
 import type { AfilmoryBuilder } from '../builder/builder.js'
 import type { Logger } from '../logger/index.js'
 import {
@@ -8,7 +10,6 @@ import {
 import type { GeocodingProvider } from '../photo/geocoding.js'
 import { createGeocodingProvider, extractLocationFromGPS, parseGPSCoordinates } from '../photo/geocoding.js'
 import { createPhotoProcessingLoggers } from '../photo/logger-adapter.js'
-import type { LocationInfo, PhotoManifestItem, PickedExif } from '../types/photo.js'
 import type { BuilderPlugin } from './types.js'
 
 const PLUGIN_NAME = 'afilmory:geocoding'

@@ -1,4 +1,5 @@
 import type { FC } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type {
   TenantRegistrationFormState,
@@ -26,16 +27,15 @@ export const SiteSettingsStep: FC<SiteSettingsStepProps> = ({
   values,
   errors,
 }) => {
+  const { t } = useTranslation()
+
   if (!schema) {
     if (isLoading) {
       return (
         <div className="space-y-8">
           <section className="space-y-3">
-            <h2 className="text-text text-lg font-semibold">Site branding</h2>
-            <p className="text-text-secondary text-sm">
-              These details appear on your public gallery, metadata, and social sharing cards. You can change them later
-              from the dashboard.
-            </p>
+            <h2 className="text-text text-lg font-semibold">{t('auth.registration.steps.site.branding_title')}</h2>
+            <p className="text-text-secondary text-sm">{t('auth.registration.steps.site.branding_description')}</p>
           </section>
           <div className="bg-fill/40 h-56 animate-pulse rounded-2xl border border-white/5" />
         </div>
@@ -45,10 +45,8 @@ export const SiteSettingsStep: FC<SiteSettingsStepProps> = ({
     return (
       <div className="space-y-6">
         <section className="space-y-3">
-          <h2 className="text-text text-lg font-semibold">Site branding</h2>
-          <p className="text-text-secondary text-sm">
-            We couldn&apos;t load the site configuration schema from the server. Refresh the page or contact support.
-          </p>
+          <h2 className="text-text text-lg font-semibold">{t('auth.registration.steps.site.branding_title')}</h2>
+          <p className="text-text-secondary text-sm">{t('auth.registration.steps.site.error_loading')}</p>
         </section>
         {errorMessage && (
           <div className="border-red/50 bg-red/10 text-red rounded-xl border px-4 py-3 text-sm">{errorMessage}</div>

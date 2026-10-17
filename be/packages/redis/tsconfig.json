@@ -1,11 +1,14 @@
 {
   "compilerOptions": {
     "incremental": true,
+    "ignoreDeprecations": "6.0",
     "target": "es2022",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "baseUrl": "./src",
     "resolveJsonModule": true,
+    "types": ["node"],
     "strict": true,
     "noImplicitAny": false,
     "declaration": true,
@@ -14,10 +17,7 @@
     "sourceMap": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "skipLibCheck": true,
-    "types": ["node"]
+    "skipLibCheck": true
   },
   "include": ["src/**/*", "tests/**/*"],
   "exclude": []

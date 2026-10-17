@@ -131,40 +131,23 @@
 
 #### `<exif:orientation>`
 
-**描述**: 图像方向  
-**格式**: 整数 (1-8)  
-**示例**: `<exif:orientation>1</exif:orientation>`  
+**描述**: 图像方向
+**格式**: 整数 (1-8)
+**示例**: `<exif:orientation>1</exif:orientation>`
 **映射**: EXIF Orientation 字段
 
-### 位置信息 (location)
+### 图片展示 (media)
 
-#### `<exif:gpsLatitude>`
+#### `<enclosure>`
 
-**描述**: GPS纬度  
-**格式**: 十进制度数  
-**示例**: `<exif:gpsLatitude>39.9042</exif:gpsLatitude>`  
-**映射**: EXIF GPSLatitude 字段
-
-#### `<exif:gpsLongitude>`
-
-**描述**: GPS经度  
-**格式**: 十进制度数  
-**示例**: `<exif:gpsLongitude>116.4074</exif:gpsLongitude>`  
-**映射**: EXIF GPSLongitude 字段
-
-#### `<exif:altitude>`
-
-**描述**: 海拔高度  
-**格式**: `{数值}m`  
-**示例**: `<exif:altitude>1200m</exif:altitude>`  
-**映射**: EXIF GPSAltitude 字段
-
-#### `<exif:location>`
-
-**描述**: 拍摄地点名称  
-**格式**: CDATA 包装的字符串  
-**示例**: `<exif:location><![CDATA[北京天安门广场]]></exif:location>`  
-**映射**: 地理编码或用户标注
+**描述**: 缩略图 URL
+**位置**: `<item>` 元素内
+**格式**: 标准 RSS enclosure 元素
+**示例**: `<enclosure url="https://example.com/thumbnails/photo.webp" type="image/webp" length="0" />`
+**说明**:
+- `url`: 缩略图的完整 URL，支持相对路径转换为绝对路径
+- `type`: MIME 类型，根据文件扩展名自动判断（webp/png/jpeg）
+- `length`: 文件大小（字节），可设为 0 表示未知
 
 ### 技术参数 (technical)
 
@@ -245,12 +228,12 @@
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" >
+<rss version="2.0" xmlns:exif="https://afilmory.art/rss/exif">
   <channel>
     <title><![CDATA[我的风景摄影画廊]]></title>
     <link>https://example.com</link>
     <description><![CDATA[分享我的风景摄影作品]]></description>
-    
+
     <!-- 协议元数据 -->
     <exif:version>1.1</exif:version>
     <exif:protocol>afilmory-rss-exif</exif:protocol>
@@ -282,13 +265,7 @@
       <exif:focalLength>50mm</exif:focalLength>
       <exif:focalLength35mm>75mm</exif:focalLength35mm>
       <exif:maxAperture>f/1.4</exif:maxAperture>
-      
-      <!-- 位置信息 -->
-      <exif:gpsLatitude>39.9042</exif:gpsLatitude>
-      <exif:gpsLongitude>116.4074</exif:gpsLongitude>
-      <exif:altitude>50m</exif:altitude>
-      <exif:location><![CDATA[北京天安门广场]]></exif:location>
-      
+
       <!-- 技术参数 -->
       <exif:whiteBalance>Auto</exif:whiteBalance>
       <exif:meteringMode>Matrix</exif:meteringMode>

@@ -25,6 +25,15 @@ function applySystemOverrides(target: BuilderConfig['system'], overrides?: Build
     if (processing.digestSuffixLength !== undefined) {
       target.processing.digestSuffixLength = processing.digestSuffixLength
     }
+    if (processing.xmp) {
+      target.processing.xmp = {
+        ...(target.processing.xmp ?? { keywords: true, regions: true }),
+        ...processing.xmp,
+      }
+    }
+    if (processing.limitInputPixels !== undefined) {
+      target.processing.limitInputPixels = processing.limitInputPixels
+    }
     if (processing.supportedFormats) {
       target.processing.supportedFormats = new Set(processing.supportedFormats as Set<string>)
     }

@@ -18,11 +18,11 @@ export const ActionGroup = () => {
   const hasViewCustomization = gallerySetting.columns !== 'auto' || gallerySetting.sortOrder !== 'desc'
 
   // 计算过滤器数量
-  const filterCount =
-    gallerySetting.selectedTags.length +
-    gallerySetting.selectedCameras.length +
-    gallerySetting.selectedLenses.length +
-    (gallerySetting.selectedRatings !== null ? 1 : 0)
+  const filterCount
+    = gallerySetting.selectedTags.length
+      + gallerySetting.selectedCameras.length
+      + gallerySetting.selectedLenses.length
+      + (gallerySetting.selectedRatings !== null ? 1 : 0)
 
   return (
     <div className="flex items-center justify-center gap-3">
@@ -33,10 +33,11 @@ export const ActionGroup = () => {
         onClick={() => {
           setCommandPaletteOpen(true)
         }}
-        className="relative h-10 min-w-10 rounded-full border-0 bg-gray-100 px-3 transition-all duration-200 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+        className="relative h-10 min-w-10 rounded-full border-0 bg-gray-100 px-3 transition-colors duration-200 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
         title={t('action.search.unified.title')}
+        aria-label={t('action.search.unified.title')}
       >
-        <i className="i-mingcute-search-line text-base text-gray-600 dark:text-gray-300" />
+        <i className="i-mingcute-search-line text-base text-gray-600 dark:text-gray-300" aria-hidden="true" />
         {filterCount > 0 && (
           <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-medium text-white">
             {filterCount}
@@ -48,11 +49,12 @@ export const ActionGroup = () => {
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => navigate('/explory')}
-        className="h-10 w-10 rounded-full border-0 bg-gray-100 transition-all duration-200 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+        onClick={() => navigate('/map')}
+        className="h-10 w-10 rounded-full border-0 bg-gray-100 transition-colors duration-200 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
         title={t('action.map.explore')}
+        aria-label={t('action.map.explore')}
       >
-        <i className="i-mingcute-map-pin-line text-base text-gray-600 dark:text-gray-300" />
+        <i className="i-mingcute-map-pin-line text-base text-gray-600 dark:text-gray-300" aria-hidden="true" />
       </Button>
 
       {/* 视图设置按钮（合并排序和列数） */}

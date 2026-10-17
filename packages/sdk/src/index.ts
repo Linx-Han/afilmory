@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+export { SHARE_EMBED_SCRIPT } from './share-embed-script'
+
 export const ViewDtoSchema = z.object({
   refKey: z.string().min(1),
 })
@@ -8,6 +10,9 @@ export type ViewDto = z.infer<typeof ViewDtoSchema>
 export const ReactionDtoSchema = z.object({
   refKey: z.string().min(1),
   reaction: z.string().min(1).max(20),
+  // Applause arrives in bursts; the client tallies locally and submits once.
+  // This bound, not the client's combo cap, is the one that actually holds.
+  count: z.coerce.number().int().min(1).max(50).default(1),
 })
 export type ReactionDto = z.infer<typeof ReactionDtoSchema>
 
@@ -54,6 +59,6 @@ export class Client {
     const query = new URLSearchParams(data).toString()
     return (await fetch(this.buildUrl(`/api/reactions?${query}`), {
       method: 'GET',
-    }).then((res) => res.json())) as Promise<AnalysisResponse>
+    }).then(res => res.json())) as Promise<AnalysisResponse>
   }
 }

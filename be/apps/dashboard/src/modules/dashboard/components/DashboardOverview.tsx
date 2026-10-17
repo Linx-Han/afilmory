@@ -195,26 +195,32 @@ const EMPTY_STATS = {
 
 function ActivitySkeleton() {
   return (
-    <div className="bg-fill/10 border-fill-tertiary animate-pulse rounded-lg border px-3.5 py-3">
-      <div className="flex items-start gap-3">
-        <div className="bg-fill/20 h-11 w-11 shrink-0 rounded-lg" />
-        <div className="flex-1 space-y-2">
-          <div className="bg-fill/20 h-3.5 w-32 rounded-full" />
-          <div className="bg-fill/15 h-3 w-48 rounded-full" />
-          <div className="bg-fill/15 h-3 w-40 rounded-full" />
+    <div className="px-3.5 py-3">
+      <div className="flex items-start gap-2 sm:gap-3">
+        <div className="bg-fill/15 h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-lg animate-pulse" />
+        <div className="flex-1 space-y-2 sm:space-y-2.5">
+          <div className="bg-fill/20 h-3.5 w-32 rounded-full animate-pulse" />
+          <div className="bg-fill/15 h-3 w-48 max-w-full rounded-full animate-pulse" />
+          <div className="bg-fill/15 h-3 w-40 max-w-full rounded-full animate-pulse" />
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            <span className="bg-fill/20 h-4 w-14 rounded-full animate-pulse" />
+            <span className="bg-fill/20 h-4 w-12 rounded-full animate-pulse" />
+            <span className="bg-fill/20 h-4 w-16 rounded-full animate-pulse" />
+          </div>
         </div>
       </div>
+      <LinearDivider className="mt-5" />
     </div>
   )
 }
 
 function StatSkeleton() {
   return (
-    <LinearBorderPanel className="bg-background-tertiary/60 relative overflow-hidden p-5">
+    <LinearBorderPanel className="bg-background-tertiary/60 relative overflow-hidden p-4 sm:p-5">
       <div className="space-y-2.5">
-        <div className="bg-fill/20 h-3 w-20 rounded-full" />
-        <div className="bg-fill/30 h-7 w-24 rounded-md" />
-        <div className="bg-fill/20 h-3 w-32 rounded-full" />
+        <div className="bg-fill/20 h-3 w-24 rounded-full animate-pulse" />
+        <div className="bg-fill/30 h-7 sm:h-8 w-28 sm:w-32 rounded-md animate-pulse" />
+        <div className="bg-fill/20 h-3 w-36 sm:w-44 rounded-full animate-pulse" />
       </div>
     </LinearBorderPanel>
   )

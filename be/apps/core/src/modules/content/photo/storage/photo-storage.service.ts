@@ -6,16 +6,23 @@ import type {
   LocalStorageProviderName,
   ManagedStorageConfig,
   RemoteStorageConfig,
-  S3Config,
+  S3CompatibleConfig,
 } from '@afilmory/builder/storage/interfaces.js'
-import { BizException, ErrorCode } from 'core/errors'
-import { normalizeStringToUndefined, requireStringWithMessage } from 'core/helpers/normalize.helper'
-import { BuilderConfigService } from 'core/modules/configuration/builder-config/builder-config.service'
-import { SettingService } from 'core/modules/configuration/setting/setting.service'
-import type { BuilderStorageProvider } from 'core/modules/configuration/setting/storage-provider.utils'
-import { SystemSettingService } from 'core/modules/configuration/system-setting/system-setting.service'
-import { StoragePlanService } from 'core/modules/platform/billing/storage-plan.service'
+import { BizException, ErrorCode } from '@core/errors'
+import {
+  normalizeStringToUndefined,
+  parseBoolean,
+  parseNumber,
+  requireStringWithMessage,
+} from '@core/helpers/normalize.helper'
+import { BuilderConfigService } from '@core/modules/configuration/builder-config/builder-config.service'
+import { SettingService } from '@core/modules/configuration/setting/setting.service'
+import type { BuilderStorageProvider } from '@core/modules/configuration/setting/storage-provider.utils'
+import { SystemSettingService } from '@core/modules/configuration/system-setting/system-setting.service'
+import { StoragePlanService } from '@core/modules/platform/billing/plan/storage-plan.service'
 import { injectable } from 'tsyringe'
+
+import { parseRetryMode } from './storage-config-parser.utils'
 
 type ResolveOverrides = {
   builderConfig?: BuilderConfig
@@ -36,10 +43,10 @@ export class PhotoStorageService {
   async resolveConfigForTenant(
     tenantId: string,
     overrides: ResolveOverrides = {},
-  ): Promise<{ builderConfig: BuilderConfig; storageConfig: StorageConfig }> {
+  ): Promise<{ builderConfig: BuilderConfig, storageConfig: StorageConfig }> {
     const activeProviderIdRaw = await this.settingService.get('builder.storage.activeProvider', { tenantId })
-    const activeProviderId =
-      typeof activeProviderIdRaw === 'string' && activeProviderIdRaw.trim().length > 0
+    const activeProviderId
+      = typeof activeProviderIdRaw === 'string' && activeProviderIdRaw.trim().length > 0
         ? activeProviderIdRaw.trim()
         : null
 
@@ -53,7 +60,6 @@ export class PhotoStorageService {
       return { builderConfig: overrides.builderConfig, storageConfig }
     }
 
-    const activeProvider = await this.settingService.getActiveStorageProvider({ tenantId })
     if (activeProviderId === MANAGED_ACTIVE_PROVIDER_ID) {
       const managedConfig = await this.tryResolveManagedStorageConfig(tenantId)
       if (managedConfig) {
@@ -64,6 +70,7 @@ export class PhotoStorageService {
       }
     }
 
+    const activeProvider = await this.settingService.getActiveStorageProvider({ tenantId })
     if (!activeProvider) {
       throw new BizException(ErrorCode.COMMON_BAD_REQUEST, {
         message: 'Active storage provider is not configured. Configure storage settings before running sync.',
@@ -80,7 +87,7 @@ export class PhotoStorageService {
 
   private async tryResolveManagedStorageConfig(tenantId: string): Promise<ManagedStorageConfig | null> {
     const [plan, provider] = await Promise.all([
-      this.storagePlanService.getPlanSummaryForTenant(tenantId),
+      this.storagePlanService.getActivePlanSummaryForTenant(tenantId),
       this.systemSettingService.getManagedStorageProvider(),
     ])
 
@@ -105,55 +112,83 @@ export class PhotoStorageService {
     }
   }
 
-  private mapProviderToStorageConfig(provider: BuilderStorageProvider): StorageConfig {
+  mapProviderToStorageConfig(provider: BuilderStorageProvider): StorageConfig {
     this.assertProviderSupported(provider.type)
 
     const config = provider.config ?? {}
     switch (provider.type) {
-      case 's3': {
-        const bucket = requireStringWithMessage(config.bucket, 'Active S3 storage provider is missing `bucket`.')
-        const result: S3Config = {
-          provider: 's3',
+      case 's3':
+      case 'oss':
+      case 'cos': {
+        const providerLabel = provider.type.toUpperCase()
+        const bucket = requireStringWithMessage(
+          config.bucket,
+          `Active ${providerLabel} storage provider is missing \`bucket\`.`,
+        )
+        const result: S3CompatibleConfig = {
+          provider: provider.type as S3CompatibleConfig['provider'],
           bucket,
         }
 
         const region = normalizeStringToUndefined(config.region)
-        if (region) result.region = region
+        if (region)
+          result.region = region
         const endpoint = normalizeStringToUndefined(config.endpoint)
-        if (endpoint) result.endpoint = endpoint
+        if (endpoint)
+          result.endpoint = endpoint
         const accessKeyId = normalizeStringToUndefined(config.accessKeyId)
-        if (accessKeyId) result.accessKeyId = accessKeyId
+        if (accessKeyId)
+          result.accessKeyId = accessKeyId
         const secretAccessKey = normalizeStringToUndefined(config.secretAccessKey)
-        if (secretAccessKey) result.secretAccessKey = secretAccessKey
-        const prefix = normalizeStringToUndefined(config.prefix)
-        if (prefix) result.prefix = prefix
-        const customDomain = normalizeStringToUndefined(config.customDomain)
-        if (customDomain) result.customDomain = customDomain
-        const excludeRegex = normalizeStringToUndefined(config.excludeRegex)
-        if (excludeRegex) result.excludeRegex = excludeRegex
+        if (secretAccessKey)
+          result.secretAccessKey = secretAccessKey
 
-        const maxFileLimit = this.parseNumber(config.maxFileLimit)
-        if (typeof maxFileLimit === 'number') result.maxFileLimit = maxFileLimit
-        const keepAlive = this.parseBoolean(config.keepAlive)
-        if (typeof keepAlive === 'boolean') result.keepAlive = keepAlive
-        const maxSockets = this.parseNumber(config.maxSockets)
-        if (typeof maxSockets === 'number') result.maxSockets = maxSockets
-        const connectionTimeoutMs = this.parseNumber(config.connectionTimeoutMs)
-        if (typeof connectionTimeoutMs === 'number') result.connectionTimeoutMs = connectionTimeoutMs
-        const socketTimeoutMs = this.parseNumber(config.socketTimeoutMs)
-        if (typeof socketTimeoutMs === 'number') result.socketTimeoutMs = socketTimeoutMs
-        const requestTimeoutMs = this.parseNumber(config.requestTimeoutMs)
-        if (typeof requestTimeoutMs === 'number') result.requestTimeoutMs = requestTimeoutMs
-        const idleTimeoutMs = this.parseNumber(config.idleTimeoutMs)
-        if (typeof idleTimeoutMs === 'number') result.idleTimeoutMs = idleTimeoutMs
-        const totalTimeoutMs = this.parseNumber(config.totalTimeoutMs)
-        if (typeof totalTimeoutMs === 'number') result.totalTimeoutMs = totalTimeoutMs
-        const retryMode = this.parseRetryMode(config.retryMode)
-        if (retryMode) result.retryMode = retryMode
-        const maxAttempts = this.parseNumber(config.maxAttempts)
-        if (typeof maxAttempts === 'number') result.maxAttempts = maxAttempts
-        const downloadConcurrency = this.parseNumber(config.downloadConcurrency)
-        if (typeof downloadConcurrency === 'number') result.downloadConcurrency = downloadConcurrency
+        const prefix = normalizeStringToUndefined(config.prefix)
+        if (prefix)
+          result.prefix = prefix
+        const customDomain = normalizeStringToUndefined(config.customDomain)
+        if (customDomain)
+          result.customDomain = customDomain
+        const excludeRegex = normalizeStringToUndefined(config.excludeRegex)
+        if (excludeRegex)
+          result.excludeRegex = excludeRegex
+
+        const maxFileLimit = parseNumber(config.maxFileLimit)
+        if (typeof maxFileLimit === 'number')
+          result.maxFileLimit = maxFileLimit
+        const keepAlive = parseBoolean(config.keepAlive)
+        if (typeof keepAlive === 'boolean')
+          result.keepAlive = keepAlive
+        const maxSockets = parseNumber(config.maxSockets)
+        if (typeof maxSockets === 'number')
+          result.maxSockets = maxSockets
+        const connectionTimeoutMs = parseNumber(config.connectionTimeoutMs)
+        if (typeof connectionTimeoutMs === 'number')
+          result.connectionTimeoutMs = connectionTimeoutMs
+        const socketTimeoutMs = parseNumber(config.socketTimeoutMs)
+        if (typeof socketTimeoutMs === 'number')
+          result.socketTimeoutMs = socketTimeoutMs
+        const requestTimeoutMs = parseNumber(config.requestTimeoutMs)
+        if (typeof requestTimeoutMs === 'number')
+          result.requestTimeoutMs = requestTimeoutMs
+        const idleTimeoutMs = parseNumber(config.idleTimeoutMs)
+        if (typeof idleTimeoutMs === 'number')
+          result.idleTimeoutMs = idleTimeoutMs
+        const totalTimeoutMs = parseNumber(config.totalTimeoutMs)
+        if (typeof totalTimeoutMs === 'number')
+          result.totalTimeoutMs = totalTimeoutMs
+        const retryMode = parseRetryMode(config.retryMode)
+        if (retryMode)
+          result.retryMode = retryMode
+        const maxAttempts = parseNumber(config.maxAttempts)
+        if (typeof maxAttempts === 'number')
+          result.maxAttempts = maxAttempts
+        const downloadConcurrency = parseNumber(config.downloadConcurrency)
+        if (typeof downloadConcurrency === 'number')
+          result.downloadConcurrency = downloadConcurrency
+        const sigV4Service = normalizeStringToUndefined(config.sigV4Service)
+        if (sigV4Service)
+          result.sigV4Service = sigV4Service
 
         return result
       }
@@ -168,13 +203,20 @@ export class PhotoStorageService {
         }
 
         const branch = normalizeStringToUndefined(config.branch)
-        if (branch) result.branch = branch
+        if (branch)
+          result.branch = branch
         const token = normalizeStringToUndefined(config.token)
-        if (token) result.token = token
+        if (token)
+          result.token = token
         const pathValue = normalizeStringToUndefined(config.path)
-        if (pathValue) result.path = pathValue
-        const useRawUrl = this.parseBoolean(config.useRawUrl)
-        if (typeof useRawUrl === 'boolean') result.useRawUrl = useRawUrl
+        if (pathValue)
+          result.path = pathValue
+        const useRawUrl = parseBoolean(config.useRawUrl)
+        if (typeof useRawUrl === 'boolean')
+          result.useRawUrl = useRawUrl
+        const customDomain = normalizeStringToUndefined(config.customDomain)
+        if (customDomain)
+          result.customDomain = customDomain
 
         return result
       }
@@ -202,18 +244,24 @@ export class PhotoStorageService {
           bucketName,
         }
         const prefix = normalizeStringToUndefined(config.prefix)
-        if (prefix) result.prefix = prefix
+        if (prefix)
+          result.prefix = prefix
         const customDomain = normalizeStringToUndefined(config.customDomain)
-        if (customDomain) result.customDomain = customDomain
+        if (customDomain)
+          result.customDomain = customDomain
         const excludeRegex = normalizeStringToUndefined(config.excludeRegex)
-        if (excludeRegex) result.excludeRegex = excludeRegex
+        if (excludeRegex)
+          result.excludeRegex = excludeRegex
 
-        const maxFileLimit = this.parseNumber(config.maxFileLimit)
-        if (typeof maxFileLimit === 'number') result.maxFileLimit = maxFileLimit
-        const authorizationTtlMs = this.parseNumber(config.authorizationTtlMs)
-        if (typeof authorizationTtlMs === 'number') result.authorizationTtlMs = authorizationTtlMs
-        const uploadUrlTtlMs = this.parseNumber(config.uploadUrlTtlMs)
-        if (typeof uploadUrlTtlMs === 'number') result.uploadUrlTtlMs = uploadUrlTtlMs
+        const maxFileLimit = parseNumber(config.maxFileLimit)
+        if (typeof maxFileLimit === 'number')
+          result.maxFileLimit = maxFileLimit
+        const authorizationTtlMs = parseNumber(config.authorizationTtlMs)
+        if (typeof authorizationTtlMs === 'number')
+          result.authorizationTtlMs = authorizationTtlMs
+        const uploadUrlTtlMs = parseNumber(config.uploadUrlTtlMs)
+        if (typeof uploadUrlTtlMs === 'number')
+          result.uploadUrlTtlMs = uploadUrlTtlMs
 
         return result
       }
@@ -232,45 +280,6 @@ export class PhotoStorageService {
         message: `云端服务不支持 ${label} 存储提供商`,
       })
     }
-  }
-
-  private parseNumber(value?: string | null): number | undefined {
-    const normalized = normalizeStringToUndefined(value)
-    if (!normalized) {
-      return undefined
-    }
-
-    const parsed = Number(normalized)
-    return Number.isFinite(parsed) ? parsed : undefined
-  }
-
-  private parseBoolean(value?: string | null): boolean | undefined {
-    const normalized = normalizeStringToUndefined(value)
-    if (!normalized) {
-      return undefined
-    }
-
-    const lowered = normalized.toLowerCase()
-    if (['true', '1', 'yes', 'y', 'on'].includes(lowered)) {
-      return true
-    }
-    if (['false', '0', 'no', 'n', 'off'].includes(lowered)) {
-      return false
-    }
-    return undefined
-  }
-
-  private parseRetryMode(value?: string | null): S3Config['retryMode'] | undefined {
-    const normalized = normalizeStringToUndefined(value)
-    if (!normalized) {
-      return undefined
-    }
-
-    if (normalized === 'standard' || normalized === 'adaptive' || normalized === 'legacy') {
-      return normalized
-    }
-
-    return undefined
   }
 
   private ensureUserSettings(config: BuilderConfig): NonNullable<BuilderConfig['user']> {

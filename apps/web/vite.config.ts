@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process'
 import { rmSync } from 'node:fs'
-import path from 'node:path'
+import path, { resolve } from 'node:path'
+import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 import tailwindcss from '@tailwindcss/vite'
@@ -13,6 +14,7 @@ import { analyzer } from 'vite-bundle-analyzer'
 import { checker } from 'vite-plugin-checker'
 import { createHtmlPlugin } from 'vite-plugin-html'
 import { VitePWA } from 'vite-plugin-pwa'
+import { routeBuilderPlugin } from 'vite-plugin-route-builder'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 import PKG from '../../package.json'
@@ -25,6 +27,7 @@ import { manifestInjectPlugin } from './plugins/vite/manifest-inject'
 import { ogImagePlugin } from './plugins/vite/og-image-plugin'
 import { photosStaticPlugin } from './plugins/vite/photos-static'
 import { siteConfigInjectPlugin } from './plugins/vite/site-config-inject'
+import { vibeloftTelemetryPlugin } from './plugins/vite/vibeloft-telemetry'
 
 const devPrint = (): PluginOption => ({
   name: 'dev-print',
@@ -49,11 +52,20 @@ const ReactCompilerConfig = {
   /* ... */
 }
 
+const ROOT = fileURLToPath(new URL('./', import.meta.url))
+const routeGenPlugins: PluginOption[] = [
+  routeBuilderPlugin({
+    pagePattern: `${resolve(ROOT, './src/pages')}/**/*.tsx`,
+    outputPath: `${resolve(ROOT, './src/generated-routes.ts')}`,
+    enableInDev: true,
+
+    segmentGroupOrder: ['main'],
+  }),
+]
 const staticWebBuildPlugins: PluginOption[] = [
   manifestInjectPlugin(),
   siteConfigInjectPlugin(),
   photosStaticPlugin(),
-
   VitePWA({
     base: '/',
     scope: '/',
@@ -88,7 +100,8 @@ const staticWebBuildPlugins: PluginOption[] = [
     },
     workbox: {
       maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
-      globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
+      navigateFallback: '',
+      globPatterns: ['**/*.{js,css,ico,png,svg,webp}'],
       globIgnores: ['**/*.{jpg,jpeg}'], // 忽略大图片文件
       runtimeCaching: [
         {
@@ -164,13 +177,12 @@ const BUILD_FOR_SERVER_SERVE = process.env.BUILD_FOR_SERVER_SERVE === '1'
 export default defineConfig(() => {
   return {
     base: BUILD_FOR_SERVER_SERVE ? '/static/web/' : '/',
-    // Vite MPA configuration
+    assetsInclude: ['**/*.wasm'],
     build: {
       rollupOptions: BUILD_FOR_SERVER_SERVE
         ? {
             input: {
               main: path.resolve(__dirname, 'index.html'),
-              share: path.resolve(__dirname, 'share.html'),
             },
           }
         : undefined,
@@ -194,6 +206,7 @@ export default defineConfig(() => {
         root: __dirname,
       }),
 
+      ...routeGenPlugins,
       createDependencyChunksPlugin([
         ['heic-to'],
         ['react', 'react-dom'],
@@ -202,6 +215,7 @@ export default defineConfig(() => {
       localesJsonPlugin(),
       tailwindcss(),
       ...(BUILD_FOR_SERVER_SERVE ? [] : staticWebBuildPlugins),
+      vibeloftTelemetryPlugin(),
       process.env.analyzer && analyzer(),
 
       devPrint(),
@@ -221,7 +235,8 @@ export default defineConfig(() => {
 function getGitHash() {
   try {
     return execSync('git rev-parse HEAD').toString().trim()
-  } catch (e) {
+  }
+  catch (e) {
     console.error('Failed to get git hash', e)
     return ''
   }

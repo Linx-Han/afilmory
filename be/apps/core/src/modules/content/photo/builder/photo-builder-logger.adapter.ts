@@ -1,6 +1,6 @@
 import type { Logger as BuilderLogger } from '@afilmory/builder/logger/index.js'
 import { relayLogMessage } from '@afilmory/builder/logger/index.js'
-import type { PrettyLogger } from '@afilmory/framework'
+import type { PrettyLogger } from '@tsuki-hono/common'
 import type { ConsolaInstance } from 'consola'
 
 class ConsolaCompatibleLogger {
@@ -57,6 +57,7 @@ export function createBuilderLoggerAdapter(baseLogger: PrettyLogger): BuilderLog
   return {
     main: createTaggedLogger('PhotoBuilder:Main') as unknown as ConsolaInstance,
     s3: createTaggedLogger('PhotoBuilder:S3') as unknown as ConsolaInstance,
+    b2: createTaggedLogger('PhotoBuilder:B2') as unknown as ConsolaInstance,
     image: createTaggedLogger('PhotoBuilder:Image') as unknown as ConsolaInstance,
     thumbnail: createTaggedLogger('PhotoBuilder:Thumbnail') as unknown as ConsolaInstance,
     blurhash: createTaggedLogger('PhotoBuilder:Blurhash') as unknown as ConsolaInstance,

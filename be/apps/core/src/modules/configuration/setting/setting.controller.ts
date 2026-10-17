@@ -1,15 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@afilmory/framework'
-import { BizException, ErrorCode } from 'core/errors'
-import { Roles } from 'core/guards/roles.decorator'
-import { BypassResponseTransform } from 'core/interceptors/response-transform.decorator'
+import { BizException, ErrorCode } from '@core/errors'
+import { PlatformRoles } from '@core/guards/roles.decorator'
+import { BypassResponseTransform } from '@core/interceptors/response-transform.decorator'
+import { Body, Controller, Delete, Get, Param, Post } from '@tsuki-hono/common'
 
 import { SettingKeys } from './setting.constant'
 import type { GetSettingsBodyDto } from './setting.dto'
 import { DeleteSettingDto, GetSettingDto, SetSettingDto } from './setting.dto'
+import type { SettingEntryInput } from './setting.service'
 import { SettingService } from './setting.service'
 
 @Controller('settings')
-@Roles('superadmin')
+@PlatformRoles('superadmin')
 export class SettingController {
   constructor(private readonly settingService: SettingService) {}
 
@@ -48,7 +49,7 @@ export class SettingController {
 
   @Post('/')
   async set(@Body() { entries }: SetSettingDto) {
-    await this.settingService.setMany(entries)
+    await this.settingService.setMany(entries as SettingEntryInput[])
     return { updated: entries }
   }
 

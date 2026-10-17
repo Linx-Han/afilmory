@@ -234,8 +234,8 @@ body {
   --color-info: var(--info);
   --color-destructive-foreground: var(--destructive-foreground);
   @keyframes skeleton {
-  to {
-    background-position: -200% 0;
+    to {
+      background-position: -200% 0;
     }
   }
 }
@@ -270,8 +270,9 @@ body {
   }
 }
 
-@source inline('i-simple-icons-github');
-@source inline('i-simple-icons-google');
+@source inline('i-logos-github-icon');
+@source inline('i-logos-google-icon');
+@source inline('i-simple-icons-apple');
 
 .shape-squircle {
   corner-shape: squircle;

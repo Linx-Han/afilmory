@@ -34,7 +34,8 @@ const toastStyles = {
     flex-1 min-w-0
   `,
   icon: tw`
-    flex-shrink-0 mt-0.5 size-5
+    shrink-0 mt-0.5 size-5
+    relative
     [li[data-type="success"]_&]:text-green
     [li[data-type="error"]_&]:text-red
     [li[data-type="warning"]_&]:text-orange

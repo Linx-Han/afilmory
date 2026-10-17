@@ -3,6 +3,7 @@ import { useStore } from '@tanstack/react-form'
 import { useQuery } from '@tanstack/react-query'
 import type { FC, KeyboardEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 
@@ -52,6 +53,7 @@ export const RegistrationWizard: FC = () => {
   })
 
   const [siteSchema, setSiteSchema] = useState<UiSchema<TenantSiteFieldKey> | null>(null)
+  const { t } = useTranslation()
   const advanceStep = useCallback(() => {
     setCurrentStepIndex((prev) => {
       const nextIndex = Math.min(REGISTRATION_STEPS.length - 1, prev + 1)
@@ -201,6 +203,8 @@ export const RegistrationWizard: FC = () => {
       if (!isEmptyValue(current)) {
         return false
       }
+      // The `form.setFieldValue` cannot bypass the `.` key accessor, requiring two operations.
+      form.state.values[key] = value
       form.setFieldValue(key, () => value)
       return true
     }
@@ -325,7 +329,7 @@ export const RegistrationWizard: FC = () => {
     const step = REGISTRATION_STEPS[currentStepIndex]
     if (step.id === 'login') {
       if (!authUser) {
-        toast.error('Please sign in to continue')
+        toast.error(t('auth.registration.wizard.toast.sign_in_required'))
         return
       }
       advanceStep()
@@ -334,7 +338,11 @@ export const RegistrationWizard: FC = () => {
     if (step.id === 'site') {
       const result = siteSettingsSchema.safeParse(formValues)
       if (!result.success) {
-        toast.error(`Error in ${result.error.issues.map((issue) => issue.message).join(', ')}`)
+        toast.error(
+          t('auth.registration.wizard.toast.validation_error', {
+            issues: result.error.issues.map((issue) => issue.message).join(', '),
+          }),
+        )
         return
       }
 
@@ -554,9 +562,9 @@ export const RegistrationWizard: FC = () => {
       </LinearBorderContainer>
 
       <p className="text-text-tertiary mt-6 text-sm">
-        Already have an account?{' '}
+        {t('auth.registration.wizard.have_account')}{' '}
         <Link to="/login" className="text-accent hover:underline">
-          Sign in
+          {t('auth.registration.wizard.sign_in')}
         </Link>
         .
       </p>

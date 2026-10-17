@@ -4,7 +4,9 @@
 
 ## S3 存储提供商
 
-支持 AWS S3 和兼容 S3 API 的存储服务（如 MinIO、阿里云 OSS 等）。
+支持 AWS S3 和大多数 S3 API 兼容的对象存储（如 MinIO、Cloudflare R2、DigitalOcean Spaces 等）。
+
+> 如果你使用 **阿里云 OSS** 或 **腾讯云 COS**，现在可以直接使用 `provider: 'oss'` 或 `provider: 'cos'`，它们基于同一套实现，但提供了默认的 Endpoint 和 SigV4 Service 配置，避免重复参数。详见下文。
 
 ### 配置示例
 
@@ -20,6 +22,54 @@ const s3Config: StorageConfig = {
   customDomain: 'https://cdn.example.com',
 }
 ```
+
+## 阿里云 OSS 提供商
+
+Aliyun OSS 已提供 SigV4 兼容 API。通过 `provider: 'oss'`，Afilmory 会默认使用 `oss` 作为 SigV4 service 并生成标准的 `bucket.oss-xx.aliyuncs.com` Endpoint。
+
+### 配置示例
+
+```typescript
+const ossConfig: StorageConfig = {
+  provider: 'oss',
+  bucket: 'gallery-assets',
+  region: 'oss-cn-hangzhou',
+  accessKeyId: process.env.ALIYUN_AK!,
+  secretAccessKey: process.env.ALIYUN_SK!,
+  endpoint: 'https://oss-cn-hangzhou.aliyuncs.com', // 可省略，默认会根据 region 生成
+  customDomain: 'https://img.example.cn',
+}
+```
+
+### 提示
+
+- region 需包含 `oss-` 前缀，例如 `oss-cn-shanghai`。
+- 若使用内网或加速域名，可通过 `endpoint` 覆盖，或设置 `customDomain` 生成公开 URL。
+- 仍可通过 `sigV4Service` 手动覆盖签名服务名（默认 `oss`）。
+
+## 腾讯云 COS 提供商
+
+COS 与 AWS S3 API 高度兼容。`provider: 'cos'` 会默认生成 `bucket.cos.<region>.myqcloud.com` 的 Endpoint 并使用 `s3` SigV4 service。
+
+### 配置示例
+
+```typescript
+const cosConfig: StorageConfig = {
+  provider: 'cos',
+  bucket: 'gallery-1250000000', // 记得包含 APPID
+  region: 'ap-shanghai',
+  accessKeyId: process.env.COS_SECRET_ID!,
+  secretAccessKey: process.env.COS_SECRET_KEY!,
+  endpoint: 'https://cos.ap-shanghai.myqcloud.com', // 可选
+  prefix: 'photos/',
+}
+```
+
+### 提示
+
+- bucket 需包含 COS 要求的 `-APPID` 后缀。
+- 如果使用自定义加速域名，仅需设置 `customDomain`。
+- 默认 SigV4 service 为 `s3`，如需兼容自建网关可自定义 `sigV4Service`。
 
 ## GitHub 存储提供商
 
@@ -46,7 +96,36 @@ const githubConfig: StorageConfig = {
   token: 'ghp_xxxxxxxxxxxx', // GitHub 访问令牌（可选）
   path: 'photos', // 照片存储路径（可选）
   useRawUrl: true, // 使用 raw.githubusercontent.com（默认 true）
+  customDomain: 'cdn.jsdelivr.net/gh/your-username/photo-gallery@main', // 自定义 CDN 域名（可选）
 }
+```
+
+### 自定义 CDN 域名
+
+如果 `raw.githubusercontent.com` 在你的地区访问速度较慢，可以配置自定义 CDN：
+
+```typescript
+const githubConfig: StorageConfig = {
+  provider: 'github',
+  owner: 'your-username',
+  repo: 'photo-gallery',
+  branch: 'main',
+  path: 'photos',
+  // 使用 jsDelivr CDN
+  customDomain: 'cdn.jsdelivr.net/gh/your-username/photo-gallery@main',
+}
+```
+
+**常用 CDN 选项：**
+
+- **jsDelivr**: `cdn.jsdelivr.net/gh/owner/repo@branch`
+- **Statically**: `cdn.statically.io/gh/owner/repo/branch`
+- **自定义代理**: 你自己的 CDN 代理域名
+
+当配置了 `customDomain` 时，它会优先于 `useRawUrl`。生成的 URL 格式为：
+
+```
+https://{customDomain}/{path}/{filename}
 ```
 
 ### 设置步骤
@@ -73,6 +152,7 @@ const githubConfig: StorageConfig = {
    ```
 
 4. **更新配置文件**
+
    ```typescript
    // builder.config.ts
    export const builderConfig: BuilderConfig = {

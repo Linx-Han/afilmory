@@ -1,6 +1,6 @@
 import type { UiSchemaTFunction } from '../../ui/ui-schema/ui-schema.i18n'
 
-export type StorageProviderType = 's3' | 'github' | 'b2'
+export type StorageProviderType = 's3' | 'oss' | 'cos' | 'github' | 'b2'
 
 export interface StorageProviderFieldSchema {
   key: string
@@ -18,7 +18,7 @@ export interface StorageProviderFormSchema {
   fields: Record<StorageProviderType, readonly StorageProviderFieldSchema[]>
 }
 
-const STORAGE_PROVIDER_TYPES: readonly StorageProviderType[] = ['s3', 'github', 'b2']
+const STORAGE_PROVIDER_TYPES: readonly StorageProviderType[] = ['s3', 'oss', 'cos', 'github', 'b2']
 
 type StorageProviderFieldConfig = {
   key: string
@@ -31,70 +31,74 @@ type StorageProviderFieldConfig = {
   required?: boolean
 }
 
+const S3_FIELD_CONFIG: readonly StorageProviderFieldConfig[] = [
+  {
+    key: 'bucket',
+    labelKey: 'storage.providers.fields.s3.bucket.label',
+    placeholderKey: 'storage.providers.fields.s3.bucket.placeholder',
+    descriptionKey: 'storage.providers.fields.s3.bucket.description',
+    required: true,
+  },
+  {
+    key: 'region',
+    labelKey: 'storage.providers.fields.s3.region.label',
+    placeholderKey: 'storage.providers.fields.s3.region.placeholder',
+    descriptionKey: 'storage.providers.fields.s3.region.description',
+    required: true,
+  },
+  {
+    key: 'endpoint',
+    labelKey: 'storage.providers.fields.s3.endpoint.label',
+    placeholderKey: 'storage.providers.fields.s3.endpoint.placeholder',
+    descriptionKey: 'storage.providers.fields.s3.endpoint.description',
+    helperKey: 'storage.providers.fields.s3.endpoint.helper',
+    required: true,
+  },
+  {
+    key: 'accessKeyId',
+    labelKey: 'storage.providers.fields.s3.access-key.label',
+    placeholderKey: 'storage.providers.fields.s3.access-key.placeholder',
+    required: true,
+  },
+  {
+    key: 'secretAccessKey',
+    labelKey: 'storage.providers.fields.s3.secret-key.label',
+    placeholderKey: 'storage.providers.fields.s3.secret-key.placeholder',
+    sensitive: true,
+    required: true,
+  },
+  {
+    key: 'prefix',
+    labelKey: 'storage.providers.fields.s3.prefix.label',
+    placeholderKey: 'storage.providers.fields.s3.prefix.placeholder',
+    descriptionKey: 'storage.providers.fields.s3.prefix.description',
+  },
+  {
+    key: 'customDomain',
+    labelKey: 'storage.providers.fields.s3.custom-domain.label',
+    placeholderKey: 'storage.providers.fields.s3.custom-domain.placeholder',
+    descriptionKey: 'storage.providers.fields.s3.custom-domain.description',
+  },
+  {
+    key: 'excludeRegex',
+    labelKey: 'storage.providers.fields.s3.exclude-regex.label',
+    placeholderKey: 'storage.providers.fields.s3.exclude-regex.placeholder',
+    descriptionKey: 'storage.providers.fields.s3.exclude-regex.description',
+    helperKey: 'storage.providers.fields.s3.exclude-regex.helper',
+    multiline: true,
+  },
+  // {
+  //   key: 'maxFileLimit',
+  //   labelKey: 'storage.providers.fields.s3.max-files.label',
+  //   placeholderKey: 'storage.providers.fields.s3.max-files.placeholder',
+  //   descriptionKey: 'storage.providers.fields.s3.max-files.description',
+  // },
+]
+
 const STORAGE_PROVIDER_FIELD_CONFIG: Record<StorageProviderType, readonly StorageProviderFieldConfig[]> = {
-  s3: [
-    {
-      key: 'bucket',
-      labelKey: 'storage.providers.fields.s3.bucket.label',
-      placeholderKey: 'storage.providers.fields.s3.bucket.placeholder',
-      descriptionKey: 'storage.providers.fields.s3.bucket.description',
-      required: true,
-    },
-    {
-      key: 'region',
-      labelKey: 'storage.providers.fields.s3.region.label',
-      placeholderKey: 'storage.providers.fields.s3.region.placeholder',
-      descriptionKey: 'storage.providers.fields.s3.region.description',
-      required: true,
-    },
-    {
-      key: 'endpoint',
-      labelKey: 'storage.providers.fields.s3.endpoint.label',
-      placeholderKey: 'storage.providers.fields.s3.endpoint.placeholder',
-      descriptionKey: 'storage.providers.fields.s3.endpoint.description',
-      helperKey: 'storage.providers.fields.s3.endpoint.helper',
-      required: true,
-    },
-    {
-      key: 'accessKeyId',
-      labelKey: 'storage.providers.fields.s3.access-key.label',
-      placeholderKey: 'storage.providers.fields.s3.access-key.placeholder',
-      required: true,
-    },
-    {
-      key: 'secretAccessKey',
-      labelKey: 'storage.providers.fields.s3.secret-key.label',
-      placeholderKey: 'storage.providers.fields.s3.secret-key.placeholder',
-      sensitive: true,
-      required: true,
-    },
-    {
-      key: 'prefix',
-      labelKey: 'storage.providers.fields.s3.prefix.label',
-      placeholderKey: 'storage.providers.fields.s3.prefix.placeholder',
-      descriptionKey: 'storage.providers.fields.s3.prefix.description',
-    },
-    {
-      key: 'customDomain',
-      labelKey: 'storage.providers.fields.s3.custom-domain.label',
-      placeholderKey: 'storage.providers.fields.s3.custom-domain.placeholder',
-      descriptionKey: 'storage.providers.fields.s3.custom-domain.description',
-    },
-    {
-      key: 'excludeRegex',
-      labelKey: 'storage.providers.fields.s3.exclude-regex.label',
-      placeholderKey: 'storage.providers.fields.s3.exclude-regex.placeholder',
-      descriptionKey: 'storage.providers.fields.s3.exclude-regex.description',
-      helperKey: 'storage.providers.fields.s3.exclude-regex.helper',
-      multiline: true,
-    },
-    // {
-    //   key: 'maxFileLimit',
-    //   labelKey: 'storage.providers.fields.s3.max-files.label',
-    //   placeholderKey: 'storage.providers.fields.s3.max-files.placeholder',
-    //   descriptionKey: 'storage.providers.fields.s3.max-files.description',
-    // },
-  ],
+  s3: S3_FIELD_CONFIG,
+  oss: S3_FIELD_CONFIG,
+  cos: S3_FIELD_CONFIG,
   github: [
     {
       key: 'owner',
@@ -130,6 +134,13 @@ const STORAGE_PROVIDER_FIELD_CONFIG: Record<StorageProviderType, readonly Storag
       labelKey: 'storage.providers.fields.github.path.label',
       placeholderKey: 'storage.providers.fields.github.path.placeholder',
       descriptionKey: 'storage.providers.fields.github.path.description',
+    },
+    {
+      key: 'customDomain',
+      labelKey: 'storage.providers.fields.github.custom-domain.label',
+      placeholderKey: 'storage.providers.fields.github.custom-domain.placeholder',
+      descriptionKey: 'storage.providers.fields.github.custom-domain.description',
+      helperKey: 'storage.providers.fields.github.custom-domain.helper',
     },
     {
       key: 'useRawUrl',

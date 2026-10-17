@@ -48,7 +48,7 @@ export function buildRegistrationInitialValues(
   return {
     tenantName: initial?.tenantName ?? '',
     tenantSlug: initial?.tenantSlug ?? '',
-    termsAccepted: initial?.termsAccepted ?? false,
+    termsAccepted: initial?.termsAccepted ?? true,
     ...siteValues,
   }
 }

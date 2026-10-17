@@ -31,6 +31,6 @@ export interface StorageProviderFieldDefinition {
 }
 
 export interface StorageProviderFormSchema {
-  types: ReadonlyArray<{ value: StorageProviderType; label: string }>
+  types: ReadonlyArray<{ value: StorageProviderType, label: string }>
   fields: Record<string, ReadonlyArray<StorageProviderFieldDefinition>>
 }

@@ -1,19 +1,25 @@
 import { Button, Modal, Prompt } from '@afilmory/ui'
 import { Spring } from '@afilmory/utils'
-import { DynamicIcon } from 'lucide-react/dynamic'
+import { ShieldCheck } from 'lucide-react'
 import { m } from 'motion/react'
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
+import { toast } from 'sonner'
 
 import { useSetPhotoSyncAutoRun } from '~/atoms/photo-sync'
 import { LinearBorderPanel } from '~/components/common/LinearBorderPanel'
 import { MainPageLayout, useMainPageLayout } from '~/components/layouts/MainPageLayout'
 import { useBlock } from '~/hooks/useBlock'
+import { getRequestErrorMessage } from '~/lib/errors'
 import { useManagedStoragePlansQuery } from '~/modules/storage-plans'
 
 import { MANAGED_STORAGE_ACTIVE_ID, storageProvidersI18nKeys } from '../constants'
-import { useStorageProviderSchemaQuery, useStorageProvidersQuery, useUpdateStorageProvidersMutation } from '../hooks'
+import {
+  useStorageProviderSchemaQuery,
+  useStorageProvidersQuery,
+  useUpdateStorageProvidersMutation,
+} from '../hooks'
 import type { StorageProvider } from '../types'
 import { createEmptyProvider } from '../utils'
 import { ManagedStorageEntryCard } from './ManagedStorageEntryCard'
@@ -44,9 +50,9 @@ export function StorageProvidersManager() {
   const schemaReady = Boolean(providerForm)
   const isLoading = (isProvidersLoading || isSchemaLoading) && (!data || !schemaReady)
   const isError = isProvidersError || isSchemaError
-  const errorMessage =
-    (providersError instanceof Error ? providersError.message : undefined) ??
-    (schemaError instanceof Error ? schemaError.message : undefined)
+  const errorMessage
+    = (providersError instanceof Error ? providersError.message : undefined)
+      ?? (schemaError instanceof Error ? schemaError.message : undefined)
 
   const [providers, setProviders] = useState<StorageProvider[]>([])
   const [activeProviderId, setActiveProviderId] = useState<string | null>(null)
@@ -90,7 +96,7 @@ export function StorageProvidersManager() {
     if (!providerForm) {
       return new Map<string, string>()
     }
-    return new Map(providerForm.types.map((type) => [type.value, type.label]))
+    return new Map(providerForm.types.map(type => [type.value, type.label]))
   }, [providerForm])
 
   const managedPlanAvailable = Boolean(managedPlansQuery.data?.currentPlan)
@@ -129,9 +135,9 @@ export function StorageProvidersManager() {
 
   const handleSaveProvider = (updatedProvider: StorageProvider) => {
     setProviders((prev) => {
-      const exists = prev.some((p) => p.id === updatedProvider.id)
+      const exists = prev.some(p => p.id === updatedProvider.id)
       if (exists) {
-        return prev.map((p) => (p.id === updatedProvider.id ? updatedProvider : p))
+        return prev.map(p => (p.id === updatedProvider.id ? updatedProvider : p))
       }
       // New provider
       const result = [...prev, updatedProvider]
@@ -150,8 +156,8 @@ export function StorageProvidersManager() {
   }
 
   const handleSave = () => {
-    const resolvedActiveId =
-      activeProviderId === MANAGED_STORAGE_ACTIVE_ID ? MANAGED_STORAGE_ACTIVE_ID : activeProviderId
+    const resolvedActiveId
+      = activeProviderId === MANAGED_STORAGE_ACTIVE_ID ? MANAGED_STORAGE_ACTIVE_ID : activeProviderId
 
     updateMutation.mutate(
       {
@@ -161,8 +167,8 @@ export function StorageProvidersManager() {
       {
         onSuccess: () => {
           setIsDirty(false)
-          const hadProvidersInitially =
-            initialProviderStateRef.current ?? ((data?.providers.length ?? 0) > 0 ? true : false)
+          const hadProvidersInitially
+            = initialProviderStateRef.current ?? ((data?.providers.length ?? 0) > 0)
           if (!hadProvidersInitially && providers.length > 0 && !hasShownSyncPromptRef.current) {
             initialProviderStateRef.current = true
             hasShownSyncPromptRef.current = true
@@ -178,17 +184,21 @@ export function StorageProvidersManager() {
             })
           }
         },
+        onError: (error) => {
+          const message = getRequestErrorMessage(error, t('errors.request.generic'))
+          toast.error(t(storageProvidersI18nKeys.status.error, { reason: message }))
+        },
       },
     )
   }
 
-  const disableSave =
-    isLoading ||
-    isError ||
-    !schemaReady ||
-    !isDirty ||
-    updateMutation.isPending ||
-    (providers.length === 0 && activeProviderId !== MANAGED_STORAGE_ACTIVE_ID)
+  const disableSave
+    = isLoading
+      || isError
+      || !schemaReady
+      || !isDirty
+      || updateMutation.isPending
+      || (providers.length === 0 && activeProviderId !== MANAGED_STORAGE_ACTIVE_ID)
   useEffect(() => {
     setHeaderActionState((prev) => {
       const nextState = {
@@ -232,7 +242,7 @@ export function StorageProvidersManager() {
           transition={Spring.presets.smooth}
           className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4].map(i => (
             <div key={i} className="bg-background-tertiary h-[180px] animate-pulse rounded" />
           ))}
         </m.div>
@@ -246,7 +256,9 @@ export function StorageProvidersManager() {
         {headerActionPortal}
         <div className="bg-background-tertiary text-red flex items-center justify-center gap-3 rounded p-8 text-sm">
           <span>
-            {t(storageProvidersI18nKeys.errors.load)}：<span>{errorMessage ?? t('common.unknown-error')}</span>
+            {t(storageProvidersI18nKeys.errors.load)}
+            ：
+            <span>{errorMessage ?? t('common.unknown-error')}</span>
           </span>
         </div>
       </>
@@ -303,20 +315,27 @@ export function StorageProvidersManager() {
             transition={Spring.presets.smooth}
             className="col-span-full"
           >
-            <div className="bg-background-tertiary border-fill-tertiary flex flex-col items-center justify-center gap-3 rounded-lg border p-8 text-center">
+            <LinearBorderPanel className="bg-background-tertiary border-fill-tertiary flex flex-col items-center justify-center gap-3 p-8 text-center">
               <div className="space-y-1">
                 <p className="text-text-secondary text-sm">{t(storageProvidersI18nKeys.empty.title)}</p>
                 <p className="text-text-tertiary text-xs">{t(storageProvidersI18nKeys.empty.description)}</p>
               </div>
-              <Button type="button" size="sm" variant="primary" onClick={handleAddProvider} disabled={!schemaReady}>
+              <Button
+                type="button"
+                size="sm"
+                className="mt-4"
+                variant="primary"
+                onClick={handleAddProvider}
+                disabled={!schemaReady}
+              >
                 {t(storageProvidersI18nKeys.empty.action)}
               </Button>
-            </div>
+            </LinearBorderPanel>
           </m.div>
         )}
       </m.div>
 
-      {/* Security Notice */}
+      {/* Security & Controls */}
       <m.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -327,7 +346,7 @@ export function StorageProvidersManager() {
           <div className="flex items-start gap-3 sm:gap-4">
             <div className="shrink-0">
               <div className="bg-accent/10 inline-flex h-8 w-8 items-center justify-center rounded-lg sm:h-10 sm:w-10">
-                <DynamicIcon name="shield-check" className="h-4 w-4 text-accent sm:h-5 sm:w-5" />
+                <ShieldCheck className="h-4 w-4 text-accent sm:h-5 sm:w-5" />
               </div>
             </div>
             <div className="flex-1 space-y-1.5 sm:space-y-2">
@@ -346,6 +365,7 @@ export function StorageProvidersManager() {
           </div>
         </LinearBorderPanel>
       </m.div>
+
     </>
   )
 }

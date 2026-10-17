@@ -15,13 +15,13 @@ export function Switch({ className, ...props }: SwitchProps) {
     <SwitchAnimate
       className={clsxm(
         'relative flex h-6 w-10 items-center justify-start rounded-full border p-0.5 transition-colors',
-        'data-[state=checked]:justify-end',
+        'data-[state=checked]:justify-end disabled:pointer-events-none disabled:grayscale-50',
         className,
       )}
       {...props}
     >
       <SwitchThumb
-        className="data-[state=checked]:bg-accent data-[state=unchecked]:bg-disabled-control aspect-square h-full rounded-full transition-colors duration-200"
+        className="data-[state=checked]:bg-accent data-[state=unchecked]:bg-background-quaternary aspect-square h-full rounded-full transition-colors duration-200"
         pressedAnimation={{ width: 22 }}
       />
     </SwitchAnimate>

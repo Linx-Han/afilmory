@@ -1,4 +1,5 @@
 import { ScrollArea } from '@afilmory/ui'
+import { clsxm } from '@afilmory/utils'
 import { useTranslation } from 'react-i18next'
 import { Navigate, NavLink, Outlet } from 'react-router'
 
@@ -13,6 +14,8 @@ export function Component() {
     { to: '/superadmin/settings', labelKey: 'superadmin.nav.settings', end: true },
     { to: '/superadmin/plans', labelKey: 'superadmin.nav.plans', end: true },
     { to: '/superadmin/tenants', labelKey: 'superadmin.nav.tenants', end: true },
+    { to: '/superadmin/users', labelKey: 'superadmin.nav.users', end: false },
+    { to: '/superadmin/audit', labelKey: 'superadmin.nav.audit', end: true },
     {
       labelKey: 'superadmin.nav.builder',
       to: '/superadmin/builder',
@@ -27,33 +30,40 @@ export function Component() {
 
   return (
     <div className="flex h-screen flex-col">
-      <nav className="bg-background-tertiary relative shrink-0 px-6 py-3">
-        {/* Bottom border with gradient */}
-        <div className="via-text/20 absolute right-0 bottom-0 left-0 h-[0.5px] bg-linear-to-r from-transparent to-transparent" />
-
-        <div className="flex items-center justify-between gap-6">
+      <header className="bg-background relative shrink-0 border-b border-fill-tertiary/50">
+        <div className="flex h-14 items-center px-3 sm:px-6">
           {/* Logo/Brand */}
-          <div className="text-text text-base font-semibold">{t('superadmin.brand')}</div>
+          <div className="text-text mr-2 sm:mr-8 text-sm sm:text-base font-semibold tracking-tight">
+            {t('superadmin.brand')}
+          </div>
 
-          <div className="flex flex-1 items-center gap-1">
-            {navItems.map((tab) => (
+          {/* Navigation Tabs */}
+          <nav className="flex flex-1 items-center gap-0.5 sm:gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {navItems.map(tab => (
               <NavLink key={tab.to} to={tab.to} end={tab.end}>
                 {({ isActive }) => (
                   <div
-                    className="relative overflow-hidden rounded-md shape-squircle px-3 py-1.5 group data-[state=active]:bg-accent/80 data-[state=active]:text-white"
-                    data-state={isActive ? 'active' : 'inactive'}
+                    className={clsxm(
+                      'relative rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap',
+                      'hover:bg-fill/30',
+                      isActive ? 'bg-accent/10 text-accent' : 'text-text-secondary hover:text-text',
+                    )}
                   >
-                    <span className="relative z-10 text-[13px] font-medium">{t(tab.labelKey)}</span>
+                    {t(tab.labelKey)}
                   </div>
                 )}
               </NavLink>
             ))}
-          </div>
+          </nav>
 
           {/* Right side - User Menu */}
-          {user && <SuperAdminUserMenu user={user} />}
+          {user && (
+            <div className="border-fill-tertiary/50 ml-2 sm:ml-auto flex items-center gap-3 border-l pl-2 sm:pl-4">
+              <SuperAdminUserMenu user={user} />
+            </div>
+          )}
         </div>
-      </nav>
+      </header>
 
       <main className="bg-background flex-1 overflow-hidden">
         <ScrollArea rootClassName="h-full" viewportClassName="h-full">

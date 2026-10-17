@@ -1,12 +1,16 @@
+import { join } from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { deserialize } from 'node:v8'
+
+import type { PhotoManifestItem } from '@afilmory/typing'
 
 import type { BuilderOptions } from './builder/builder.js'
 import { AfilmoryBuilder } from './builder/builder.js'
+import { loadBuilderConfig } from './config/index.js'
 import type { PluginRunState } from './plugins/manager.js'
 import type { StorageObject } from './storage/interfaces'
 import type { BuilderConfig } from './types/config.js'
-import type { PhotoManifestItem } from './types/photo'
 import type { BatchTaskMessage, BatchTaskResult, TaskMessage, TaskResult } from './worker/cluster-pool'
 
 // 新增接口定义
@@ -39,6 +43,17 @@ export async function runAsWorker() {
   let builder: AfilmoryBuilder
   let pluginRunState: PluginRunState
 
+  // 安全发送消息到主进程（防止 EPIPE 错误）
+  const safeSend = (message: unknown) => {
+    try {
+      if (process.send && process.connected) {
+        process.send(message)
+      }
+    } catch {
+      // 主进程已关闭 IPC 通道，静默忽略
+    }
+  }
+
   // 初始化函数，从主进程接收共享数据
   const initializeWorker = async (serializedData: WorkerInitMessage['sharedData']) => {
     if (isInitialized) return
@@ -51,7 +66,18 @@ export async function runAsWorker() {
     imageObjects = sharedData.imageObjects
     existingManifestMap = sharedData.existingManifestMap
     livePhotoMap = sharedData.livePhotoMap
-    builder = new AfilmoryBuilder(sharedData.builderConfig)
+
+    // 主进程序列化时移除了 plugins（函数无法序列化），
+    // 从配置文件重新加载以获取完整的插件配置
+    const fullConfig = await loadBuilderConfig({
+      cwd: join(fileURLToPath(import.meta.url), '../../../..'),
+    })
+    const builderConfig: BuilderConfig = {
+      ...sharedData.builderConfig,
+      plugins: fullConfig.plugins,
+    }
+
+    builder = new AfilmoryBuilder(builderConfig)
     await builder.ensurePluginsReady()
     pluginRunState = builder.createPluginRunState()
 
@@ -100,6 +126,8 @@ export async function runAsWorker() {
         isForceMode: process.env.FORCE_MODE === 'true',
         isForceManifest: process.env.FORCE_MANIFEST === 'true',
         isForceThumbnails: process.env.FORCE_THUMBNAILS === 'true',
+        xmpKeywordsEnabled: process.env.XMP_KEYWORDS === 'true',
+        xmpRegionsEnabled: process.env.XMP_REGIONS === 'true',
       }
 
       const builderOptions: BuilderOptions = {
@@ -132,9 +160,7 @@ export async function runAsWorker() {
         result,
       }
 
-      if (process.send) {
-        process.send(response)
-      }
+      safeSend(response)
     } catch (error) {
       // 发送错误回主进程
       const response: TaskResult = {
@@ -143,9 +169,7 @@ export async function runAsWorker() {
         error: error instanceof Error ? error.message : String(error),
       }
 
-      if (process.send) {
-        process.send(response)
-      }
+      safeSend(response)
     }
   }
 
@@ -163,6 +187,8 @@ export async function runAsWorker() {
         isForceMode: process.env.FORCE_MODE === 'true',
         isForceManifest: process.env.FORCE_MANIFEST === 'true',
         isForceThumbnails: process.env.FORCE_THUMBNAILS === 'true',
+        xmpKeywordsEnabled: process.env.XMP_KEYWORDS === 'true',
+        xmpRegionsEnabled: process.env.XMP_REGIONS === 'true',
       }
       const batchBuilderOptions: BuilderOptions = {
         isForceMode: batchProcessorOptions.isForceMode,
@@ -241,9 +267,7 @@ export async function runAsWorker() {
         results,
       }
 
-      if (process.send) {
-        process.send(response)
-      }
+      safeSend(response)
     } catch (error) {
       // 如果批量处理失败，为每个任务发送错误结果
       const results: TaskResult[] = message.tasks.map((task) => ({
@@ -257,9 +281,7 @@ export async function runAsWorker() {
         results,
       }
 
-      if (process.send) {
-        process.send(response)
-      }
+      safeSend(response)
     }
   }
 
@@ -274,9 +296,7 @@ export async function runAsWorker() {
 
       if (message.type === 'ping') {
         // 响应主进程的 ping，表示 worker 已准备好
-        if (process.send) {
-          process.send({ type: 'pong', workerId })
-        }
+        safeSend({ type: 'pong', workerId })
         return
       }
 
@@ -284,9 +304,7 @@ export async function runAsWorker() {
         // 处理初始化消息
         try {
           await initializeWorker(message.sharedData)
-          if (process.send) {
-            process.send({ type: 'init-complete', workerId })
-          }
+          safeSend({ type: 'init-complete', workerId })
         } catch (error) {
           console.error('Worker initialization failed', error)
           process.exit(1)
@@ -322,7 +340,5 @@ export async function runAsWorker() {
   })
 
   // 告知主进程 worker 已准备好
-  if (process.send) {
-    process.send({ type: 'ready', workerId })
-  }
+  safeSend({ type: 'ready', workerId })
 }

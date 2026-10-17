@@ -78,6 +78,8 @@ const DropdownMenuItem = ({
   active,
   highlightColor: _highlightColor = 'accent',
   shortcut: _shortcut,
+  asChild,
+  children,
   ...props
 }: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
   inset?: boolean
@@ -87,35 +89,57 @@ const DropdownMenuItem = ({
   shortcut?: string
 } & {
   ref?: React.Ref<React.ElementRef<typeof DropdownMenuPrimitive.Item> | null>
-}) => (
-  <DropdownMenuPrimitive.Item
-    ref={ref}
-    className={clsxm(
-      'cursor-menu relative flex select-none items-center rounded-lg px-2.5 py-1 outline-none data-disabled:pointer-events-none data-disabled:opacity-50',
-      'focus-within:outline-transparent text-sm my-0.5 transition-all duration-200',
-      'data-highlighted:text-accent',
-      'h-[28px]',
-      inset && 'pl-8',
-      className,
-    )}
-    style={{
-      // @ts-ignore - CSS variable for data-highlighted state
-      '--highlight-bg':
-        'linear-gradient(to right, color-mix(in srgb, var(--color-accent) 8%, transparent), color-mix(in srgb, var(--color-accent) 5%, transparent))',
-    }}
-    {...props}
-  >
-    {!!icon && (
-      <span className="mr-1.5 inline-flex size-4 items-center justify-center">
-        {typeof icon === 'function' ? icon({ isActive: active }) : icon}
-      </span>
-    )}
-    {props.children}
+}) => {
+  const mergedClassName = clsxm(
+    'cursor-menu relative flex select-none items-center rounded-lg px-2.5 py-1 outline-none data-disabled:pointer-events-none data-disabled:opacity-50',
+    'focus-within:outline-transparent text-sm my-0.5 transition-all duration-200',
+    'data-highlighted:text-accent',
+    'h-[28px]',
+    inset && 'pl-8',
+    className,
+  )
 
-    {/* Justify Fill */}
-    {!!icon && <span className="ml-1.5 size-4" />}
-  </DropdownMenuPrimitive.Item>
-)
+  if (asChild) {
+    return (
+      <DropdownMenuPrimitive.Item
+        ref={ref}
+        className={mergedClassName}
+        style={{
+          // @ts-ignore - CSS variable for data-highlighted state
+          '--highlight-bg':
+            'linear-gradient(to right, color-mix(in srgb, var(--color-accent) 8%, transparent), color-mix(in srgb, var(--color-accent) 5%, transparent))',
+        }}
+        asChild
+        {...props}
+      >
+        {children}
+      </DropdownMenuPrimitive.Item>
+    )
+  }
+
+  return (
+    <DropdownMenuPrimitive.Item
+      ref={ref}
+      className={mergedClassName}
+      style={{
+        // @ts-ignore - CSS variable for data-highlighted state
+        '--highlight-bg':
+          'linear-gradient(to right, color-mix(in srgb, var(--color-accent) 8%, transparent), color-mix(in srgb, var(--color-accent) 5%, transparent))',
+      }}
+      {...props}
+    >
+      {!!icon && (
+        <span className="mr-1.5 inline-flex size-4 items-center justify-center">
+          {typeof icon === 'function' ? icon({ isActive: active }) : icon}
+        </span>
+      )}
+      {children}
+
+      {/* Justify Fill */}
+      {!!icon && <span className="ml-1.5 size-4" />}
+    </DropdownMenuPrimitive.Item>
+  )
+}
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
 
 const DropdownMenuCheckboxItem = ({

@@ -1,4 +1,4 @@
-import type { S3Config } from '../../storage/interfaces.js'
+import type { S3CompatibleConfig } from '../../storage/interfaces.js'
 import { S3StorageProvider } from '../../storage/providers/s3-provider.js'
 import type { BuilderPlugin } from '../types.js'
 
@@ -16,7 +16,7 @@ export default function s3StoragePlugin(options: S3StoragePluginOptions = {}): B
         registerStorageProvider(
           providerName,
           (config) => {
-            return new S3StorageProvider(config as S3Config)
+            return new S3StorageProvider(config as S3CompatibleConfig)
           },
           { category: 'remote' },
         )

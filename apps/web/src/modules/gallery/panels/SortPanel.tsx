@@ -1,7 +1,34 @@
+import { clsxm } from '@afilmory/utils'
 import { useAtom } from 'jotai'
 import { useTranslation } from 'react-i18next'
 
 import { gallerySettingAtom } from '~/atoms/app'
+
+interface SortOptionProps {
+  icon: string
+  label: string
+  isActive: boolean
+  onClick: () => void
+}
+
+const SortOption = ({ icon, label, isActive, onClick }: SortOptionProps) => {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={clsxm(
+        'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors duration-200 lg:py-1',
+        'hover:bg-[linear-gradient(to_right,color-mix(in_srgb,var(--color-accent)_8%,transparent),color-mix(in_srgb,var(--color-accent)_5%,transparent))]',
+        'hover:text-accent',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-1',
+      )}
+    >
+      <i className={icon} />
+      <span>{label}</span>
+      {isActive && <i className="i-mingcute-check-line ml-auto" />}
+    </button>
+  )
+}
 
 export const SortPanel = () => {
   const { t } = useTranslation()
@@ -13,52 +40,21 @@ export const SortPanel = () => {
       sortOrder: order,
     })
   }
+
   return (
     <div className="-mx-2 flex flex-col p-0 text-sm lg:p-0">
-      <div
-        className="group flex cursor-pointer items-center gap-2 rounded-lg bg-transparent px-2 py-2 transition-all duration-200 lg:py-1"
-        style={{
-          // @ts-ignore - CSS variable for hover state
-          '--highlight-bg':
-            'linear-gradient(to right, color-mix(in srgb, var(--color-accent) 8%, transparent), color-mix(in srgb, var(--color-accent) 5%, transparent))',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background =
-            'linear-gradient(to right, color-mix(in srgb, var(--color-accent) 8%, transparent), color-mix(in srgb, var(--color-accent) 5%, transparent))'
-          e.currentTarget.style.color = 'var(--color-accent)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent'
-          e.currentTarget.style.color = ''
-        }}
+      <SortOption
+        icon="i-mingcute-sort-descending-line"
+        label={t('action.sort.newest.first')}
+        isActive={gallerySetting.sortOrder === 'desc'}
         onClick={() => setSortOrder('desc')}
-      >
-        <i className="i-mingcute-sort-descending-line" />
-        <span>{t('action.sort.newest.first')}</span>
-        {gallerySetting.sortOrder === 'desc' && <i className="i-mingcute-check-line ml-auto" />}
-      </div>
-      <div
-        className="group flex cursor-pointer items-center gap-2 rounded-lg bg-transparent px-2 py-2 transition-all duration-200 lg:py-1"
-        style={{
-          // @ts-ignore - CSS variable for hover state
-          '--highlight-bg':
-            'linear-gradient(to right, color-mix(in srgb, var(--color-accent) 8%, transparent), color-mix(in srgb, var(--color-accent) 5%, transparent))',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background =
-            'linear-gradient(to right, color-mix(in srgb, var(--color-accent) 8%, transparent), color-mix(in srgb, var(--color-accent) 5%, transparent))'
-          e.currentTarget.style.color = 'var(--color-accent)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent'
-          e.currentTarget.style.color = ''
-        }}
+      />
+      <SortOption
+        icon="i-mingcute-sort-ascending-line"
+        label={t('action.sort.oldest.first')}
+        isActive={gallerySetting.sortOrder === 'asc'}
         onClick={() => setSortOrder('asc')}
-      >
-        <i className="i-mingcute-sort-ascending-line" />
-        <span>{t('action.sort.oldest.first')}</span>
-        {gallerySetting.sortOrder === 'asc' && <i className="i-mingcute-check-line ml-auto" />}
-      </div>
+      />
     </div>
   )
 }

@@ -4,6 +4,12 @@
   "description": "Capturing beautiful moments in life, documenting daily warmth and emotions through my lens.",
   "url": "https://afilmory.innei.in/",
   "accentColor": "#007bff",
+  "viewer": {
+    "regions": {
+      "accentSource": "system",
+      "labelPlacement": "edge"
+    }
+  },
   "author": {
     "name": "Innei",
     "url": "https://innei.in/",
@@ -11,8 +17,7 @@
   },
   "social": {
     "github": "",
-    "twitter": "",
-    "rss": false
+    "twitter": ""
   },
   "feed": {
     "folo": {
@@ -26,5 +31,21 @@
     "maplibre"
   ],
   "mapStyle": "builtin",
-  "mapProjection": "mercator"
+  "mapProjection": "mercator",
+  "beian": {
+    "icp": {
+      "enabled": false,
+      "number": "XICP备xxxxxxxx号",
+      "link": "https://beian.miit.gov.cn/"
+    },
+    "police": {
+      "enabled": false,
+      "number": "X公网安备xxxxxxxxxxxxxx号",
+      "code": "xxxxxxxxxxxxxx",
+      "icon": "https://example.com/beian.png"
+    }
+  },
+  "telemetry": {
+    "vibeloft": true
+  }
 }

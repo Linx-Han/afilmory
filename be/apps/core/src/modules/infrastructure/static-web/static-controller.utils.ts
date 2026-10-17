@@ -1,13 +1,14 @@
 import { isTenantSlugReserved } from '@afilmory/utils'
-import { BizException, ErrorCode } from 'core/errors'
-import { ROOT_TENANT_SLUG } from 'core/modules/platform/tenant/tenant.constants'
-import { getTenantContext, isPlaceholderTenantContext } from 'core/modules/platform/tenant/tenant.context'
+import { BizException, ErrorCode } from '@core/errors'
+import { ROOT_TENANT_SLUG } from '@core/modules/platform/tenant/tenant.constants'
+import { getTenantContext, isPlaceholderTenantContext } from '@core/modules/platform/tenant/tenant.context'
 
 import type { StaticDashboardService } from './static-dashboard.service'
 import { STATIC_DASHBOARD_BASENAME } from './static-dashboard.service'
 
 const TENANT_MISSING_ENTRY_PATH = `${STATIC_DASHBOARD_BASENAME}/tenant-missing.html`
 const TENANT_RESTRICTED_ENTRY_PATH = `${STATIC_DASHBOARD_BASENAME}/tenant-restricted.html`
+const TENANT_SUSPENDED_ENTRY_PATH = `${STATIC_DASHBOARD_BASENAME}/tenant-suspended.html`
 
 export const StaticControllerUtils = {
   cloneResponseWithStatus(response: Response, status: number): Response {
@@ -39,16 +40,35 @@ export const StaticControllerUtils = {
       return isTenantSlugReserved(candidate)
     }
 
-    if (!tenantSlug) {
+    // Reserved slugs are a public-registration and auto-provisioning boundary.
+    // An active tenant with one of these slugs can only have been provisioned
+    // through a trusted administrative path, so it remains routable.
+    return false
+  },
+
+  shouldRenderTenantRestrictedPage(): boolean {
+    return StaticControllerUtils.isReservedTenant({ root: true })
+  },
+
+  shouldRenderTenantSuspendedPage(): boolean {
+    const tenantContext = getTenantContext()
+    if (!tenantContext) {
       return false
     }
-
-    return isTenantSlugReserved(tenantSlug)
+    return tenantContext.tenant.banned || tenantContext.tenant.status === 'suspended'
   },
 
   shouldRenderTenantMissingPage(): boolean {
     const tenantContext = getTenantContext()
-    return !tenantContext || isPlaceholderTenantContext(tenantContext)
+    if (!tenantContext) {
+      return true
+    }
+
+    if (tenantContext.tenant.banned || tenantContext.tenant.status === 'suspended') {
+      return false
+    }
+
+    return isPlaceholderTenantContext(tenantContext)
   },
 
   async renderTenantMissingPage(dashboardService: StaticDashboardService): Promise<Response> {
@@ -71,5 +91,29 @@ export const StaticControllerUtils = {
     throw new BizException(ErrorCode.COMMON_FORBIDDEN, {
       message: 'Workspace access restricted',
     })
+  },
+
+  async renderTenantSuspendedPage(dashboardService: StaticDashboardService): Promise<Response> {
+    const response = await dashboardService.handleRequest(TENANT_SUSPENDED_ENTRY_PATH, false)
+    if (response) {
+      return StaticControllerUtils.cloneResponseWithStatus(response, 403)
+    }
+
+    throw new BizException(ErrorCode.COMMON_FORBIDDEN, {
+      message: 'Workspace suspended',
+    })
+  },
+
+  async ensureTenantAvailable(dashboardService: StaticDashboardService): Promise<Response | null> {
+    if (StaticControllerUtils.shouldRenderTenantRestrictedPage()) {
+      return await StaticControllerUtils.renderTenantRestrictedPage(dashboardService)
+    }
+    if (StaticControllerUtils.shouldRenderTenantSuspendedPage()) {
+      return await StaticControllerUtils.renderTenantSuspendedPage(dashboardService)
+    }
+    if (StaticControllerUtils.shouldRenderTenantMissingPage()) {
+      return await StaticControllerUtils.renderTenantMissingPage(dashboardService)
+    }
+    return null
   },
 }

@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { usePhotoSyncAutoRunValue, useSetPhotoSyncAutoRun } from '~/atoms/photo-sync'
 import { useMainPageLayout } from '~/components/layouts/MainPageLayout'
 import { getRequestErrorMessage } from '~/lib/errors'
+import { presentBillingUpgradeModal, resolveBillingUpgradeCategory } from '~/modules/billing/upgrade-prompts'
 
 import { runPhotoSync } from '../../api'
 import type { RunPhotoSyncPayload } from '../../types'
@@ -80,6 +81,10 @@ export function PhotoSyncActions() {
     },
     onError: (error) => {
       const normalizedError = error instanceof Error ? error : new Error(t(photoSyncActionKeys.toastErrorDescription))
+      const upgradeCategory = resolveBillingUpgradeCategory(error)
+      if (upgradeCategory) {
+        presentBillingUpgradeModal(upgradeCategory)
+      }
 
       const message = getRequestErrorMessage(error, normalizedError.message)
       toast.error(t(photoSyncActionKeys.toastErrorTitle), { description: message })

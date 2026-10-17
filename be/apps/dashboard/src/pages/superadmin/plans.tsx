@@ -23,7 +23,7 @@ const TABS = [
 export function Component() {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]['id']>('app')
-  const active = TABS.find((tab) => tab.id === activeTab) ?? TABS[0]
+  const active = TABS.find(tab => tab.id === activeTab) ?? TABS[0]
 
   return (
     <m.div
@@ -39,8 +39,8 @@ export function Component() {
 
       <PageTabs
         activeId={activeTab}
-        onSelect={(id) => setActiveTab(id as typeof activeTab)}
-        items={TABS.map((tab) => ({
+        onSelect={id => setActiveTab(id as typeof activeTab)}
+        items={TABS.map(tab => ({
           id: tab.id,
           labelKey: tab.labelKey,
         }))}
@@ -60,18 +60,25 @@ type StoragePlanRow = {
   monthlyPrice: string
   currency: string
   creemProductId: string
+  appStoreProductId: string
 }
 
 function bytesToGb(bytes: unknown): string {
-  if (bytes === null || bytes === undefined) return ''
+  if (bytes === null || bytes === undefined) {
+    return ''
+  }
   const num = Number(bytes)
-  if (!Number.isFinite(num)) return ''
+  if (!Number.isFinite(num)) {
+    return ''
+  }
   return (num / 1024 / 1024 / 1024).toFixed(2)
 }
 
 function gbToBytes(value: string): number | null {
   const parsed = Number(value)
-  if (!Number.isFinite(parsed)) return null
+  if (!Number.isFinite(parsed)) {
+    return null
+  }
   return Math.max(0, Math.round(parsed * 1024 * 1024 * 1024))
 }
 
@@ -82,9 +89,15 @@ function StoragePlanEditor() {
 
   const rawValues = useMemo(() => {
     const payload = query.data
-    if (!payload) return null
-    if ('values' in payload && payload.values) return payload.values
-    if ('settings' in payload && payload.settings) return payload.settings
+    if (!payload) {
+      return null
+    }
+    if ('values' in payload && payload.values) {
+      return payload.values
+    }
+    if ('settings' in payload && payload.settings) {
+      return payload.settings
+    }
     return null
   }, [query.data])
 
@@ -94,8 +107,8 @@ function StoragePlanEditor() {
     capacityBytes?: number | null
     isActive?: boolean
   }
-  type StoragePlanPricingEntry = { monthlyPrice?: number | null; currency?: string | null }
-  type StoragePlanProductEntry = { creemProductId?: string | null }
+  type StoragePlanPricingEntry = { monthlyPrice?: number | null, currency?: string | null }
+  type StoragePlanProductEntry = { appStoreProductId?: string | null, creemProductId?: string | null }
 
   const parsed = useMemo(() => {
     const catalog = (rawValues?.storagePlanCatalog as Record<string, StoragePlanCatalogEntry> | undefined) ?? {}
@@ -112,6 +125,7 @@ function StoragePlanEditor() {
         monthlyPrice: pricing[id]?.monthlyPrice?.toString() ?? '',
         currency: pricing[id]?.currency ?? '',
         creemProductId: products[id]?.creemProductId ?? '',
+        appStoreProductId: products[id]?.appStoreProductId ?? '',
       })),
     }
   }, [rawValues])
@@ -125,8 +139,12 @@ function StoragePlanEditor() {
   const errors = useMemo(() => {
     return rows.map((row) => {
       const rowErrors: string[] = []
-      if (!row.id.trim()) rowErrors.push(t('superadmin.plans.storage.validation.id'))
-      if (!row.name.trim()) rowErrors.push(t('superadmin.plans.storage.validation.name'))
+      if (!row.id.trim()) {
+        rowErrors.push(t('superadmin.plans.storage.validation.id'))
+      }
+      if (!row.name.trim()) {
+        rowErrors.push(t('superadmin.plans.storage.validation.name'))
+      }
       if (row.capacityGb && !Number.isFinite(Number(row.capacityGb))) {
         rowErrors.push(t('superadmin.plans.storage.validation.capacity'))
       }
@@ -137,7 +155,7 @@ function StoragePlanEditor() {
     })
   }, [rows, t])
 
-  const hasErrors = errors.some((list) => list.length > 0)
+  const hasErrors = errors.some(list => list.length > 0)
 
   const payload = useMemo((): UpdateSuperAdminSettingsPayload => {
     const catalog: Record<string, StoragePlanCatalogEntry> = {}
@@ -146,7 +164,9 @@ function StoragePlanEditor() {
 
     rows.forEach((row) => {
       const id = row.id.trim()
-      if (!id) return
+      if (!id) {
+        return
+      }
       catalog[id] = {
         name: row.name.trim(),
         description: row.description.trim() || null,
@@ -162,8 +182,11 @@ function StoragePlanEditor() {
         }
       }
 
-      if (row.creemProductId.trim()) {
-        products[id] = { creemProductId: row.creemProductId.trim() }
+      if (row.appStoreProductId.trim() || row.creemProductId.trim()) {
+        products[id] = {
+          appStoreProductId: row.appStoreProductId.trim() || null,
+          creemProductId: row.creemProductId.trim() || null,
+        }
       }
     })
 
@@ -192,11 +215,11 @@ function StoragePlanEditor() {
   )
 
   const handleRowChange = (id: string, patch: Partial<StoragePlanRow>) => {
-    setRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)))
+    setRows(prev => prev.map(row => (row.id === id ? { ...row, ...patch } : row)))
   }
 
   const handleAdd = () => {
-    setRows((prev) => [
+    setRows(prev => [
       ...prev,
       {
         id: `managed-${prev.length + 1}`,
@@ -207,12 +230,13 @@ function StoragePlanEditor() {
         monthlyPrice: '',
         currency: 'USD',
         creemProductId: '',
+        appStoreProductId: '',
       },
     ])
   }
 
   const handleRemove = (id: string) => {
-    setRows((prev) => prev.filter((row) => row.id !== id))
+    setRows(prev => prev.filter(row => row.id !== id))
   }
 
   const handleSave = () => {
@@ -224,11 +248,38 @@ function StoragePlanEditor() {
 
   if (query.isLoading) {
     return (
-      <LinearBorderPanel className="space-y-3 p-6">
-        <div className="bg-fill/40 h-6 w-32 animate-pulse rounded-full" />
-        <div className="space-y-3">
-          {[1, 2].map((key) => (
-            <div key={key} className="bg-fill/30 h-24 animate-pulse rounded-xl" />
+      <LinearBorderPanel className="space-y-4 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="bg-fill/40 h-6 w-48 animate-pulse rounded-md" />
+            <div className="bg-fill/30 mt-2 h-4 w-64 animate-pulse rounded-md" />
+          </div>
+          <div className="flex items-center gap-2 mb-4 ml-auto">
+            <div className="bg-fill/30 h-9 w-20 animate-pulse rounded-lg" />
+            <div className="bg-fill/30 h-9 w-20 animate-pulse rounded-lg" />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {[1, 2].map(key => (
+            <div key={key} className="border-fill/60 bg-fill/5 rounded-xl border p-4">
+              <div className="flex-1 space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <div className="bg-fill/30 h-3 w-16 animate-pulse rounded-md" />
+                    <div className="bg-fill/30 h-9 w-full animate-pulse rounded-lg" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="bg-fill/30 h-3 w-24 animate-pulse rounded-md" />
+                    <div className="bg-fill/30 h-9 w-full animate-pulse rounded-lg" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="bg-fill/30 h-3 w-32 animate-pulse rounded-md" />
+                  <div className="bg-fill/30 h-16 w-full animate-pulse rounded-lg" />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </LinearBorderPanel>
@@ -280,7 +331,7 @@ function StoragePlanEditor() {
                     <label className="text-text text-xs font-medium">{t('superadmin.plans.storage.fields.id')}</label>
                     <Input
                       value={row.id}
-                      onInput={(e) => handleRowChange(row.id, { id: (e.target as HTMLInputElement).value })}
+                      onInput={e => handleRowChange(row.id, { id: (e.target as HTMLInputElement).value })}
                       placeholder="managed-5gb"
                     />
                   </div>
@@ -288,7 +339,7 @@ function StoragePlanEditor() {
                     <label className="text-text text-xs font-medium">{t('superadmin.plans.storage.fields.name')}</label>
                     <Input
                       value={row.name}
-                      onInput={(e) => handleRowChange(row.id, { name: (e.target as HTMLInputElement).value })}
+                      onInput={e => handleRowChange(row.id, { name: (e.target as HTMLInputElement).value })}
                       placeholder={t('superadmin.plans.storage.fields.placeholder.name')}
                     />
                   </div>
@@ -301,12 +352,12 @@ function StoragePlanEditor() {
                   <Textarea
                     rows={2}
                     value={row.description}
-                    onInput={(e) => handleRowChange(row.id, { description: (e.target as HTMLTextAreaElement).value })}
+                    onInput={e => handleRowChange(row.id, { description: (e.target as HTMLTextAreaElement).value })}
                     placeholder={t('superadmin.plans.storage.fields.placeholder.description')}
                   />
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-5">
                   <div className="space-y-1">
                     <label className="text-text text-xs font-medium">
                       {t('superadmin.plans.storage.fields.capacity')}
@@ -315,7 +366,7 @@ function StoragePlanEditor() {
                       inputMode="decimal"
                       type="text"
                       value={row.capacityGb}
-                      onInput={(e) => handleRowChange(row.id, { capacityGb: (e.target as HTMLInputElement).value })}
+                      onInput={e => handleRowChange(row.id, { capacityGb: (e.target as HTMLInputElement).value })}
                       placeholder="5.00"
                     />
                   </div>
@@ -327,7 +378,7 @@ function StoragePlanEditor() {
                       inputMode="decimal"
                       type="text"
                       value={row.monthlyPrice}
-                      onInput={(e) => handleRowChange(row.id, { monthlyPrice: (e.target as HTMLInputElement).value })}
+                      onInput={e => handleRowChange(row.id, { monthlyPrice: (e.target as HTMLInputElement).value })}
                       placeholder="0.99"
                     />
                   </div>
@@ -337,7 +388,7 @@ function StoragePlanEditor() {
                     </label>
                     <Input
                       value={row.currency}
-                      onInput={(e) => handleRowChange(row.id, { currency: (e.target as HTMLInputElement).value })}
+                      onInput={e => handleRowChange(row.id, { currency: (e.target as HTMLInputElement).value })}
                       placeholder="USD"
                     />
                   </div>
@@ -347,8 +398,19 @@ function StoragePlanEditor() {
                     </label>
                     <Input
                       value={row.creemProductId}
-                      onInput={(e) => handleRowChange(row.id, { creemProductId: (e.target as HTMLInputElement).value })}
+                      onInput={e => handleRowChange(row.id, { creemProductId: (e.target as HTMLInputElement).value })}
                       placeholder="prod_xxx"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-text text-xs font-medium">
+                      {t('superadmin.plans.storage.fields.appStore')}
+                    </label>
+                    <Input
+                      value={row.appStoreProductId}
+                      onInput={e =>
+                        handleRowChange(row.id, { appStoreProductId: (e.target as HTMLInputElement).value })}
+                      placeholder="app.afilmory.subscription.storage5"
                     />
                   </div>
                 </div>
@@ -357,7 +419,7 @@ function StoragePlanEditor() {
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={row.isActive}
-                      onCheckedChange={(next) => handleRowChange(row.id, { isActive: next })}
+                      onCheckedChange={next => handleRowChange(row.id, { isActive: next })}
                     />
                     <span className="text-text-secondary text-sm">{t('superadmin.plans.storage.fields.active')}</span>
                   </div>
@@ -369,7 +431,7 @@ function StoragePlanEditor() {
 
                 {errors[idx] && errors[idx]!.length > 0 ? (
                   <ul className="text-red text-xs">
-                    {errors[idx]!.map((err) => (
+                    {errors[idx]!.map(err => (
                       <li key={err}>{err}</li>
                     ))}
                   </ul>
