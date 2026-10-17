@@ -11,7 +11,7 @@ the last rendered frame. Failed frame uploads restore the normal video element.
 
 Hover for 120 ms to start; enter and exit blend over 300 ms. Rendering is capped at
 24 fps, DPR 2, and 1200 pixels on the longest canvas dimension. Only hovered/fading
-photos allocate a canvas and GPU resources. Leaving, scrolling, clicking, resizing,
+photos allocate a canvas and GPU resources. Leaving, clicking, resizing,
 hiding the document, losing window focus, or unmounting releases resources. No
 React state updates occur per frame. Reduced-motion/transparency and touch-only
 devices retain the original image.
@@ -35,3 +35,7 @@ context and do not replace browser visual checks. For visual acceptance, compare
 portrait/landscape photos, rapid hover changes, scrolling, Live Photo playback,
 viewer opening, reduced motion, and a remote host without CORS. A standalone
 gallery still needs a generated photo manifest and configured photo storage.
+
+Scrolling keeps the hovered photo animated. Masonry retains pointer events while
+scrolling so leaving a photo still fades its glow out; virtualized unmounts release
+its resources.

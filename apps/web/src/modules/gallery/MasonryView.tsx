@@ -84,9 +84,10 @@ export const MasonryView = ({ photos, onRender }: MasonryViewProps) => {
   return (
     <Masonry<PhotoManifest>
       ref={masonryRef}
+      style={{ pointerEvents: 'auto' }}
       items={photos}
       render={useCallback(
-        (props) => (
+        props => (
           <MasonryItem {...props} />
         ),
         [],
