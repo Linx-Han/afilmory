@@ -1,16 +1,9 @@
 /// <reference lib="webworker" />
 import type { GainMapMetadata } from './jpeg-gainmap'
 import { extractJPEGGainMap } from './jpeg-gainmap'
-import type {
-  BitmapPlane,
-  ImagePixels,
-  Rect,
-  TextureWorkerMessage,
-  TextureWorkerRequest,
-  TilePixels,
-  TileRequest,
-} from './webgpu-tiles'
-import { OVERVIEW_SIZE, TILE_GUTTER } from './webgpu-tiles'
+import { createTilePlane } from './webgpu-tile-plane'
+import type { ImagePixels, TextureWorkerMessage, TextureWorkerRequest, TilePixels, TileRequest } from './webgpu-tiles'
+import { OVERVIEW_SIZE } from './webgpu-tiles'
 
 declare const self: DedicatedWorkerGlobalScope
 let base: ImageBitmap | undefined
@@ -46,33 +39,14 @@ async function orientGainMap(bitmap: ImageBitmap, orientation: number) {
   return canvas.transferToImageBitmap()
 }
 
-async function plane(bitmap: ImageBitmap, rect: Rect, level: number, ratioX = 1, ratioY = 1): Promise<BitmapPlane> {
-  const downsample = 2 ** level
-  const x = rect[0] * ratioX
-  const y = rect[1] * ratioY
-  const width = rect[2] * ratioX
-  const height = rect[3] * ratioY
-  const pad = TILE_GUTTER * downsample
-  const sx = Math.max(0, Math.floor(x - pad))
-  const sy = Math.max(0, Math.floor(y - pad))
-  const sw = Math.min(bitmap.width, Math.ceil(x + width + pad)) - sx
-  const sh = Math.min(bitmap.height, Math.ceil(y + height + pad)) - sy
-  const resized = await createImageBitmap(bitmap, sx, sy, sw, sh, {
-    resizeWidth: Math.max(1, Math.ceil(sw / downsample)),
-    resizeHeight: Math.max(1, Math.ceil(sh / downsample)),
-    resizeQuality: 'high',
-  })
-  return { bitmap: resized, uv: [(x - sx) / sw, (y - sy) / sh, width / sw, height / sh] }
-}
-
 async function tilePixels(tile: TileRequest): Promise<TilePixels> {
   if (!base) {
     throw new Error('Image not loaded')
   }
-  const basePlane = await plane(base, tile.rect, tile.level)
+  const basePlane = createTilePlane(base, tile.rect, tile.level, 'display-p3')
   try {
     const gainPlane = gain
-      ? await plane(gain, tile.rect, tile.level, gain.width / base.width, gain.height / base.height)
+      ? createTilePlane(gain, tile.rect, tile.level, 'srgb', gain.width / base.width, gain.height / base.height)
       : undefined
     return { ...tile, base: basePlane, gain: gainPlane }
   }
