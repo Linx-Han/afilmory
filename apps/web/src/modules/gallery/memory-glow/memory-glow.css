@@ -1,0 +1,19 @@
+.memory-glow {
+  inset: -24px;
+  width: calc(100% + 48px);
+  height: calc(100% + 48px);
+  visibility: hidden;
+}
+
+.memory-photo-surface[data-memory-active] {
+  overflow: visible;
+  background: transparent;
+}
+
+.memory-photo-surface[data-memory-active] > .memory-photo-base {
+  opacity: 0;
+}
+
+.memory-photo-surface[data-memory-active] > .memory-glow {
+  visibility: visible;
+}

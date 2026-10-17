@@ -21,6 +21,8 @@ import { useContextPhotos, usePhotoViewer } from '~/hooks/usePhotoViewer'
 import { formatExifData } from '~/modules/metadata'
 import type { PhotoManifest } from '~/types/photo'
 
+import { MemoryGlow } from './memory-glow/MemoryGlow'
+
 interface ListViewProps {
   photos: PhotoManifest[]
 }
@@ -136,11 +138,11 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
           handleClick()
         }
       }}
-      className="group flex flex-col gap-2 overflow-hidden border border-white/5 bg-white/5 p-2 backdrop-blur-sm transition-all duration-200 hover:border-white/10 hover:bg-white/8 lg:h-44 lg:flex-row lg:gap-3"
+      className="group flex flex-col gap-2 overflow-visible border border-white/5 bg-white/5 p-2 backdrop-blur-sm transition-all duration-200 hover:border-white/10 hover:bg-white/8 lg:h-44 lg:flex-row lg:gap-3"
     >
       {/* 缩略图 - 移动端按宽高比，桌面端固定高度 */}
       <div
-        className="relative w-full shrink-0 cursor-pointer overflow-hidden lg:h-full lg:w-56"
+        className="memory-photo-surface relative w-full shrink-0 cursor-pointer overflow-hidden lg:h-full lg:w-56"
         role="button"
         tabIndex={0}
         {...getViewerTransitionTriggerProps(photo.id)}
@@ -155,8 +157,9 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
           ref={imageRef}
           src={photo.thumbnailUrl || photo.originalUrl}
           alt={photo.title || 'Photo'}
-          className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105 lg:object-cover"
+          className="memory-photo-base h-full w-full object-contain lg:object-cover"
         />
+        <MemoryGlow imageRef={imageRef} />
         {/* Tags 覆盖在图片上 */}
         {photo.tags && photo.tags.length > 0 && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap gap-1 p-2">

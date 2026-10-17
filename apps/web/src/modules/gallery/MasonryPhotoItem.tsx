@@ -17,7 +17,9 @@ import { ImageLoaderManager } from '~/lib/image-loader-manager'
 import { formatExifData } from '~/modules/metadata'
 import type { PhotoManifest } from '~/types/photo'
 
-export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; width: number }) => {
+import { MemoryGlow } from './memory-glow/MemoryGlow'
+
+export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest, width: number }) => {
   const photos = useContextPhotos()
   const photoViewer = usePhotoViewer()
   const { t } = useTranslation()
@@ -28,7 +30,7 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
   const [isPlayingLivePhoto, setIsPlayingLivePhoto] = useState(false)
   const [livePhotoVideoLoaded, setLivePhotoVideoLoaded] = useState(false)
   const [isConvertingVideo, setIsConvertingVideo] = useState(false)
-  const [videoConvertionError, setVideoConversionError] = useState<unknown>(null)
+  const [videoConversionError, setVideoConversionError] = useState<unknown>(null)
 
   const imageRef = useRef<HTMLImageElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -44,10 +46,10 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
   }
 
   const handleClick = () => {
-    const photoIndex = photos.findIndex((photo) => photo.id === data.id)
+    const photoIndex = photos.findIndex(photo => photo.id === data.id)
     if (photoIndex !== -1) {
-      const triggerEl =
-        imageRef.current?.parentElement instanceof HTMLElement ? imageRef.current.parentElement : imageRef.current
+      const triggerEl
+        = imageRef.current?.parentElement instanceof HTMLElement ? imageRef.current.parentElement : imageRef.current
 
       photoViewer.openViewer(photoIndex, triggerEl ?? undefined)
     }
@@ -89,12 +91,14 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
             size: video.size,
             presentationTimestamp: video.presentationTimestamp,
           }
-        } else if (video.type === 'live-photo') {
+        }
+        else if (video.type === 'live-photo') {
           videoSource = {
             type: 'live-photo',
             videoUrl: video.videoUrl,
           }
-        } else {
+        }
+        else {
           videoSource = { type: 'none' }
         }
 
@@ -102,10 +106,12 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
           await imageLoaderManager.processVideo(videoSource, videoRef.current!)
           setLivePhotoVideoLoaded(true)
         }
-      } catch (videoError) {
+      }
+      catch (videoError) {
         console.error('Failed to process video:', videoError)
         setVideoConversionError(videoError)
-      } finally {
+      }
+      finally {
         setIsConvertingVideo(false)
       }
     }
@@ -170,7 +176,7 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
 
   return (
     <m.div
-      className="bg-fill-quaternary group relative w-full cursor-pointer overflow-hidden"
+      className="memory-photo-surface bg-fill-quaternary group relative w-full cursor-pointer overflow-hidden"
       style={{
         width,
         height: calculatedHeight,
@@ -181,7 +187,7 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
       onMouseLeave={handleMouseLeave}
     >
       {/* Blurhash 占位符 */}
-      {data.thumbHash && <Thumbhash thumbHash={data.thumbHash} className="absolute inset-0" />}
+      {data.thumbHash && <Thumbhash thumbHash={data.thumbHash} className="memory-photo-base absolute inset-0" />}
 
       {!imageError && (
         <img
@@ -189,11 +195,13 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
           src={data.thumbnailUrl}
           alt={data.title}
           loading="lazy"
-          className={'absolute inset-0 h-full w-full object-cover duration-300 group-hover:scale-105'}
+          className="memory-photo-base absolute inset-0 h-full w-full object-cover"
           onLoad={handleImageLoad}
           onError={handleImageError}
         />
       )}
+
+      <MemoryGlow imageRef={imageRef} disabled={hasVideo || !imageLoaded || imageError} />
 
       {/* Live Photo/Motion Photo 视频 */}
       {hasVideo && (
@@ -238,11 +246,11 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
             <Fragment>
               <i className="i-mingcute-live-photo-line size-4 shrink-0" />
               <span className="mr-1 shrink-0">{t('photo.live.badge')}</span>
-              {videoConvertionError ? (
-                <span className={'bg-warning/20 ml-0.5 rounded px-1 text-xs'}>
+              {videoConversionError ? (
+                <span className="bg-warning/20 ml-0.5 rounded px-1 text-xs">
                   <div
                     className="text-yellow w-3 text-center font-bold"
-                    title={(videoConvertionError as Error).message}
+                    title={(videoConversionError as Error).message}
                   >
                     !
                   </div>
@@ -275,16 +283,22 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
                 <span>{data.format}</span>
                 <span>•</span>
                 <span>
-                  {data.width} × {data.height}
+                  {data.width}
+                  {' '}
+                  ×
+                  {data.height}
                 </span>
                 <span>•</span>
-                <span>{(data.size / 1024 / 1024).toFixed(1)}MB</span>
+                <span>
+                  {(data.size / 1024 / 1024).toFixed(1)}
+                  MB
+                </span>
               </div>
 
               {/* Tags */}
               {data.tags && data.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {data.tags.map((tag) => (
+                  {data.tags.map(tag => (
                     <span
                       key={tag}
                       className="rounded-full bg-white/20 px-2 py-0.5 text-xs text-white/90 opacity-0 backdrop-blur-sm group-hover:opacity-100"
@@ -302,7 +316,10 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
                 {exifData.focalLength35mm && (
                   <div className="flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1 opacity-0 backdrop-blur-md transition-opacity duration-300 group-hover:opacity-100">
                     <StreamlineImageAccessoriesLensesPhotosCameraShutterPicturePhotographyPicturesPhotoLens className="text-white/70" />
-                    <span className="text-white/90">{exifData.focalLength35mm}mm</span>
+                    <span className="text-white/90">
+                      {exifData.focalLength35mm}
+                      mm
+                    </span>
                   </div>
                 )}
 
@@ -323,7 +340,10 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest; wi
                 {exifData.iso && (
                   <div className="flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1 opacity-0 backdrop-blur-md transition-opacity duration-300 group-hover:opacity-100">
                     <CarbonIsoOutline className="text-white/70" />
-                    <span className="text-white/90">ISO {exifData.iso}</span>
+                    <span className="text-white/90">
+                      ISO
+                      {exifData.iso}
+                    </span>
                   </div>
                 )}
               </div>
