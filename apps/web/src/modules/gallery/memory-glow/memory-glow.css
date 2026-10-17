@@ -17,3 +17,7 @@
 .memory-photo-surface[data-memory-active] > .memory-glow {
   visibility: visible;
 }
+
+.memory-photo-surface:is(:hover, [data-memory-active]) {
+  z-index: 10;
+}

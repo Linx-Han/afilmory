@@ -97,7 +97,8 @@ export function MemoryGlow({
             return
           }
           try {
-            const { width, height } = surface.getBoundingClientRect()
+            const width = surface.clientWidth
+            const height = surface.clientHeight
             if (width <= 0 || height <= 0) {
               return
             }

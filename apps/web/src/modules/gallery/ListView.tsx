@@ -1,4 +1,5 @@
 import { useScrollViewElement } from '@afilmory/ui'
+import { Spring } from '@afilmory/utils'
 import { getViewerTransitionTriggerProps } from '@afilmory/viewer-motion'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
@@ -13,6 +14,7 @@ import {
   SlidersHorizontal,
   Timer,
 } from 'lucide-react'
+import { m, useReducedMotion } from 'motion/react'
 import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -94,6 +96,7 @@ export const ListView = ({ photos }: ListViewProps) => {
 }
 
 const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
+  const reduceMotion = useReducedMotion()
   const { i18n } = useTranslation()
   const photos = useContextPhotos()
   const photoViewer = usePhotoViewer()
@@ -141,7 +144,9 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
       className="group flex flex-col gap-2 overflow-visible border border-white/5 bg-white/5 p-2 backdrop-blur-sm transition-all duration-200 hover:border-white/10 hover:bg-white/8 lg:h-44 lg:flex-row lg:gap-3"
     >
       {/* 缩略图 - 移动端按宽高比，桌面端固定高度 */}
-      <div
+      <m.div
+        whileHover={reduceMotion ? undefined : { scale: 1.025 }}
+        transition={Spring.presets.smooth}
         className="memory-photo-surface relative w-full shrink-0 cursor-pointer overflow-hidden lg:h-full lg:w-56"
         role="button"
         tabIndex={0}
@@ -160,20 +165,7 @@ const PhotoCard = ({ photo }: { photo: PhotoManifest }) => {
           className="memory-photo-base h-full w-full object-contain lg:object-cover"
         />
         <MemoryGlow imageRef={imageRef} />
-        {/* Tags 覆盖在图片上 */}
-        {photo.tags && photo.tags.length > 0 && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap gap-1 p-2">
-            {photo.tags.map(tag => (
-              <span
-                key={tag}
-                className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
+      </m.div>
 
       {/* 元数据 - 移动端自适应，桌面端固定高度 */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden py-1 lg:h-full">
