@@ -7,9 +7,11 @@ import { createMemoryRenderer } from './renderer'
 
 export function MemoryGlow({
   imageRef,
+  videoRef,
   disabled = false,
 }: {
   imageRef: RefObject<HTMLImageElement | null>
+  videoRef?: RefObject<HTMLVideoElement | null>
   disabled?: boolean
 }) {
   useEffect(() => {
@@ -32,6 +34,7 @@ export function MemoryGlow({
     let previous = 0
     let elapsed = 0
     let pendingImage: HTMLImageElement | undefined
+    let stillImage: HTMLImageElement | undefined
 
     const stop = () => {
       generation++
@@ -48,6 +51,7 @@ export function MemoryGlow({
       canvas?.remove()
       canvas = undefined
       renderer = undefined
+      stillImage = undefined
       amount = 0
       elapsed = 0
       previous = 0
@@ -68,7 +72,18 @@ export function MemoryGlow({
         stop()
         return
       }
-      renderer.draw(elapsed, amount * amount * (3 - 2 * amount))
+      try {
+        const video = videoRef?.current
+        const source = video && !video.paused && !video.ended ? video : stillImage
+        if (source) {
+          renderer.updateSource(source)
+        }
+        renderer.draw(elapsed, amount * amount * (3 - 2 * amount))
+      }
+      catch {
+        stop()
+        return
+      }
       surface.dataset.memoryActive = ''
       request = requestAnimationFrame(tick)
     }
@@ -109,6 +124,7 @@ export function MemoryGlow({
             canvas.addEventListener('webglcontextlost', lost, { signal: contextEvents.signal })
             surface.insertBefore(canvas, image.nextSibling)
             renderer = createMemoryRenderer(canvas, source, width, height)
+            stillImage = source
             request = requestAnimationFrame(tick)
           }
           catch {
@@ -159,7 +175,7 @@ export function MemoryGlow({
       resize.disconnect()
       stop()
     }
-  }, [imageRef, disabled])
+  }, [imageRef, videoRef, disabled])
 
   return null
 }

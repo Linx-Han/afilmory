@@ -2,8 +2,12 @@
 
 Ports Memora's `MemoryEdgeRenderer.swift` image kernel to WebGL: corner displacement,
 RGB separation, edge softening, and a continuous transparent feather. The center
-retains its original detail. Applied to still-photo thumbnails in masonry and list views.
-Live Photos retain their existing hover playback.
+retains its original detail. Applied to photo thumbnails in masonry and list views.
+Masonry Live Photos and Motion Photos use their current video frame during hover
+playback and return to the still image when playback stops. Video frames are
+downsampled to at most 1200 pixels on the longest side, uploaded only when playback
+time changes, and reuse texture storage when dimensions match. Buffering retains
+the last rendered frame. Failed frame uploads restore the normal video element.
 
 Hover for 120 ms to start; enter and exit blend over 300 ms. Rendering is capped at
 24 fps, DPR 2, and 1200 pixels on the longest canvas dimension. Only hovered/fading

@@ -59,7 +59,12 @@ export function createMemoryRenderer(
   const program = gl.createProgram()
   const texture = gl.createTexture()
   const buffer = gl.createBuffer()
+  let videoCanvas: HTMLCanvasElement | undefined
   const dispose = () => {
+    if (videoCanvas) {
+      videoCanvas.width = 0
+      videoCanvas.height = 0
+    }
     gl.deleteTexture(texture)
     gl.deleteBuffer(buffer)
     gl.deleteProgram(program)
@@ -120,7 +125,61 @@ export function createMemoryRenderer(
     )
     const timeLocation = gl.getUniformLocation(program, 'time')
     const amountLocation = gl.getUniformLocation(program, 'amount')
+    const cropLocation = gl.getUniformLocation(program, 'crop')
+    let currentSource: HTMLImageElement | HTMLVideoElement = image
+    let videoTime = -1
+    let textureWidth = image.naturalWidth
+    let textureHeight = image.naturalHeight
     return {
+      updateSource(source: HTMLImageElement | HTMLVideoElement) {
+        const isVideo = 'videoWidth' in source
+        if (isVideo && (source.readyState < 2 || !source.videoWidth || !source.videoHeight)) {
+          return
+        }
+        if (source === currentSource && (!isVideo || source.currentTime === videoTime)) {
+          return
+        }
+        let pixels: HTMLImageElement | HTMLCanvasElement
+        let sourceWidth: number
+        let sourceHeight: number
+        if (isVideo) {
+          videoCanvas ??= document.createElement('canvas')
+          const scale = Math.min(1, 1200 / Math.max(source.videoWidth, source.videoHeight))
+          sourceWidth = Math.max(1, Math.round(source.videoWidth * scale))
+          sourceHeight = Math.max(1, Math.round(source.videoHeight * scale))
+          if (videoCanvas.width !== sourceWidth || videoCanvas.height !== sourceHeight) {
+            videoCanvas.width = sourceWidth
+            videoCanvas.height = sourceHeight
+          }
+          const context = videoCanvas.getContext('2d')
+          if (!context) {
+            throw new Error('Video frame canvas unavailable')
+          }
+          context.drawImage(source, 0, 0, sourceWidth, sourceHeight)
+          pixels = videoCanvas
+        }
+        else {
+          pixels = source
+          sourceWidth = source.naturalWidth
+          sourceHeight = source.naturalHeight
+        }
+        gl.bindTexture(gl.TEXTURE_2D, texture)
+        if (sourceWidth === textureWidth && sourceHeight === textureHeight) {
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
+        }
+        else {
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
+        }
+        if (gl.getError() !== gl.NO_ERROR) {
+          throw new Error('Video texture upload failed')
+        }
+        const aspect = sourceWidth / sourceHeight
+        gl.uniform2f(cropLocation, Math.min(1, viewAspect / aspect), Math.min(1, aspect / viewAspect))
+        textureWidth = sourceWidth
+        textureHeight = sourceHeight
+        currentSource = source
+        videoTime = isVideo ? source.currentTime : -1
+      },
       draw(time: number, amount: number) {
         gl.uniform1f(timeLocation, time)
         gl.uniform1f(amountLocation, amount)

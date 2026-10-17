@@ -195,14 +195,15 @@ export const MasonryPhotoItem = memo(({ data, width }: { data: PhotoManifest, wi
         />
       )}
 
-      <MemoryGlow imageRef={imageRef} disabled={hasVideo || !imageLoaded || imageError} />
+      <MemoryGlow imageRef={imageRef} videoRef={videoRef} disabled={!imageLoaded || imageError} />
 
       {/* Live Photo/Motion Photo 视频 */}
       {hasVideo && (
         <video
           ref={videoRef}
+          crossOrigin="anonymous"
           className={clsx(
-            'absolute inset-0 h-full w-full object-cover',
+            'memory-photo-base absolute inset-0 h-full w-full object-cover',
             isPlayingLivePhoto ? 'z-10' : 'pointer-events-none opacity-0',
           )}
           muted
