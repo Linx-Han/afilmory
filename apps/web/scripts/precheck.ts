@@ -10,5 +10,10 @@ export const precheck = async () => {
   await $({
     cwd: workdir,
     stdio: 'inherit',
+  })`sh scripts/preinstall.sh`
+
+  await $({
+    cwd: workdir,
+    stdio: 'inherit',
   })`pnpm --filter @afilmory/builder cli`
 }
